@@ -1,0 +1,11 @@
+test:
+  user:
+    name: rgquiet
+    email: robinguedel@gmail.com
+    password: tsunami123
+
+spring:
+  data:
+    mongodb:
+      database: votedo
+      uri: mongodb+srv://rgquiet:xkbW4kf32WAJplDC@test-ut4xi.mongodb.net/test?retryWrites=true&w=majority
