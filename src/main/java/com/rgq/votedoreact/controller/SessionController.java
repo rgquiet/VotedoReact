@@ -5,7 +5,6 @@ import com.rgq.votedoreact.service.SessionService;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
-@CrossOrigin
 @RestController
 @RequestMapping("/api/session")
 public class SessionController {

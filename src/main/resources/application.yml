@@ -1,8 +1,9 @@
-test:
-  user:
-    name: rgquiet
-    email: robinguedel@gmail.com
-    password: tsunami123
+spotify:
+  auth:
+    endpoint: https://accounts.spotify.com/authorize
+    clientId: b07659c8338143f98ded7683fd1d13c5
+    redirectUri: http://localhost:8080
+    scopes: user-read-email%20app-remote-control
 
 spring:
   data:

@@ -10,4 +10,9 @@ public class WebController {
     public String getIndex() {
         return "index";
     }
+
+    @GetMapping("/test")
+    public String getTest() {
+        return "test";
+    }
 }

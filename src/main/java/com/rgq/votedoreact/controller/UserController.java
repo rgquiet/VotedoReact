@@ -21,9 +21,4 @@ public class UserController {
     public Mono<User> getUserById(@PathVariable String id) {
         return service.getById(id);
     }
-
-    @GetMapping("/testUser")
-    public User getTestUser() {
-        return service.getTest();
-    }
 }
