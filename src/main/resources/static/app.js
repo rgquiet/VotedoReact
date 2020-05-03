@@ -1,4 +1,5 @@
-const api = 'http://localhost:8080/api/';
+const home = 'http://localhost:8080/'
+const api = home + 'api/';
 let signIn = false;
 
 $(function() {
@@ -24,10 +25,8 @@ function checkAccessToken() {
                 }
             },
             success: function(response) {
-                console.log(response);
                 signIn = true;
-                $('#collapse1').collapse('show');
-                // wip: $('#userName').text(response['username']);
+                $('#userName').text(response['username']);
             }
         });
     }
@@ -44,4 +43,18 @@ function implicitGrantFlow() {
             }
         });
     }
+}
+
+function showMe(page) {
+    $('.display').each(function() {
+        $(this).removeClass('display');
+        $(this).addClass('hidden');
+    });
+    let pageName = $(page).attr('name');
+    $('#page-' + pageName).addClass('display');
+    $('#page-' + pageName).removeClass('hidden');
+}
+
+function onCreateSession() {
+    alert('wip...');
 }

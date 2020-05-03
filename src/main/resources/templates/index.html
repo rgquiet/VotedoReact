@@ -3,49 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <title>Index</title>
+    <!-- jquery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <!-- bootstrap -->
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <!-- ionic basic -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css"/>
+    <!-- ionic additional libraries -->
+    <script type="module">
+        import { menuController } from "https://cdn.jsdelivr.net/npm/@ionic/core@next/dist/ionic/index.esm.js";
+        window.menuController = menuController;
+    </script>
+    <!-- custom -->
     <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-    <div class="panel-group">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" href="#collapse1" onclick="implicitGrantFlow();">Create Session</a>
-                </h4>
-            </div>
-            <div id="collapse1" class="panel-collapse collapse">
-                <div class="panel-body">
-                    <form id="createSessionForm">
+    <ion-app>
+        <ion-menu side="start" content-id="main-content">
+            <ion-header>
+                <ion-toolbar translucent>
+                    <ion-title id="userName">Guest</ion-title>
+                </ion-toolbar>
+            </ion-header>
 
+            <ion-content>
+                <p>wip...</p>
+            </ion-content>
+        </ion-menu>
 
-                        <!-- wip: use ionic instead -->
-                        <div class="row form-group">
-                            <label for="inputName">Session Name</label>
-                            <input id="inputName" class="form-control"
-                                   type="text" style="margin-right: 15px;" placeholder="Enter a name..."/>
-                        </div>
-                        <div id="pwHide" class="row form-group">
-                            <label for="inputPassword">Password</label>
-                            <input id="inputPassword" class="form-control"
-                                   type="password" style="margin-right: 15px;" placeholder="Enter a password..."/>
-                        </div>
-                        <div class="form-group form-check" style="margin-bottom: 0px;">
-                            <input id="ckbPublic" class="form-check-input"
-                                   type="checkbox" onclick="hide('ckbPublic', 'pwHide')"/>
-                            <label class="form-check-label" for="ckbPublic">Public</label>
-                        </div>
+        <ion-tabs id="main-content" class="ion-page">
+            <ion-header>
+                <ion-toolbar>
+                    <ion-buttons slot="start">
+                        <ion-menu-button></ion-menu-button>
+                    </ion-buttons>
+                    <ion-title class="ion-text-center">Votedo</ion-title>
+                </ion-toolbar>
+            </ion-header>
 
+            <ion-content id="page-home" class="ion-padding hidden">
+                <ion-title>Home</ion-title>
+            </ion-content>
 
-                        <input class="btn btn-primary"
-                               type="button" value="Create" onclick=""/>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+            <ion-content id="page-create" class="ion-padding display">
+                <form>
+                    <ion-grid>
+                        <ion-row>
+                            <ion-col size-sm="6" offset-sm="3">
+                                <ion-item>
+                                    <ion-label position="floating">Session Name</ion-label>
+                                    <ion-input type="text" formControlName="sessionName"></ion-input>
+                                </ion-item>
+
+                                <ion-item class="hidden" lines="none">
+                                    <ion-label color="danger">
+                                        <small>Title must be between 3 and 25 characters long</small>
+                                    </ion-label>
+                                </ion-item>
+
+                                <ion-item class="center" lines="none">
+                                    <ion-checkbox class="ion-margin-end" formControlName="close"></ion-checkbox>
+                                    <ion-label>Private</ion-label>
+                                </ion-item>
+
+                                <ion-button color="primary" expand="block"
+                                            onclick="onCreateSession();">Create</ion-button>
+                            </ion-col>
+                        </ion-row>
+                    </ion-grid>
+                </form>
+            </ion-content>
+
+            <ion-content id="page-friends" class="ion-padding hidden">
+                <ion-title>Friends</ion-title>
+            </ion-content>
+
+            <ion-tab-bar slot="bottom">
+                <ion-tab-button name="home" onclick="showMe(this);">
+                    <ion-label>Home</ion-label>
+                    <ion-icon name="home-outline"></ion-icon>
+                </ion-tab-button>
+
+                <ion-tab-button name="create" onclick="implicitGrantFlow(); showMe(this);">
+                    <ion-label>New Session</ion-label>
+                    <ion-icon name="add-outline"></ion-icon>
+                </ion-tab-button>
+
+                <ion-tab-button name="friends" onclick="implicitGrantFlow(); showMe(this);">
+                    <ion-label>Friends</ion-label>
+                    <ion-icon name="person-outline"></ion-icon>
+                </ion-tab-button>
+            </ion-tab-bar>
+        </ion-tabs>
+    </ion-app>
 
     <script src="app.js"></script>
 </body>
