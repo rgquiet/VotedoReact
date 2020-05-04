@@ -14,6 +14,7 @@ public class SessionController {
         this.service = service;
     }
 
+    /* test sample */
     @GetMapping("/{id}")
     public Mono<Session> getSessionById(@PathVariable String id) {
         return service.getById(id);

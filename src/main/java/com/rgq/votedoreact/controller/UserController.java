@@ -17,6 +17,7 @@ public class UserController {
         this.service = service;
     }
 
+    /* test sample */
     @GetMapping("/{id}")
     public Mono<User> getUserById(@PathVariable String id) {
         return service.getById(id);

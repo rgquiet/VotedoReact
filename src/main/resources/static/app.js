@@ -4,7 +4,7 @@ let signIn = false;
 
 $(function() {
     checkAccessToken();
-    // wip: Subscribe public sessions
+    subscribePublicSession();
 });
 
 function checkAccessToken() {
@@ -27,6 +27,10 @@ function checkAccessToken() {
             success: function(response) {
                 signIn = true;
                 $('#userName').text(response['username']);
+                if(response['imgUrl']) {
+                    $('#userImg').attr('src', response['imgUrl']);
+                    $('#userImg').parent().removeClass('hidden');
+                }
             }
         });
     }
@@ -55,6 +59,12 @@ function showMe(page) {
     $('#page-' + pageName).removeClass('hidden');
 }
 
+/* Page: 'home' */
+function subscribePublicSession() {
+    // wip: https://www.w3schools.com/html/html5_serversentevents.asp
+}
+
+/* Page: 'create' */
 function onCreateSession() {
-    alert('wip...');
+    // wip: Send to backend
 }

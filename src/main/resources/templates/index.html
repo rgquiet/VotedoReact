@@ -8,16 +8,16 @@
     <!-- bootstrap -->
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-    <!-- ionic basic -->
+    <!-- ionic -->
     <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
     <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css"/>
-    <!-- ionic additional libraries -->
+    <!-- modules -->
     <script type="module">
         import { menuController } from "https://cdn.jsdelivr.net/npm/@ionic/core@next/dist/ionic/index.esm.js";
         window.menuController = menuController;
     </script>
-    <!-- custom -->
+    <!-- custom style -->
     <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
@@ -25,6 +25,9 @@
         <ion-menu side="start" content-id="main-content">
             <ion-header>
                 <ion-toolbar translucent>
+                    <ion-avatar class="ion-padding hidden" slot="start">
+                        <img id="userImg"/>
+                    </ion-avatar>
                     <ion-title id="userName">Guest</ion-title>
                 </ion-toolbar>
             </ion-header>
@@ -44,11 +47,37 @@
                 </ion-toolbar>
             </ion-header>
 
-            <ion-content id="page-home" class="ion-padding hidden">
-                <ion-title>Home</ion-title>
+            <ion-content id="page-home" class="ion-padding display">
+                <!-- wip... -->
+                <ion-grid>
+                    <ion-row>
+                        <ion-col size="12" size-sm="8" offset-sm="2">
+                            <ion-list id="publicSessionList">
+                                <ion-item class="publicSession">
+                                    <ion-thumbnail>
+                                        <ion-img src="https://media.giphy.com/media/UvOcKPHrkKSLm/giphy.gif"></ion-img>
+                                    </ion-thumbnail>
+
+                                    <ion-label class="ion-margin-start">
+                                        <h2>session.title</h2>
+                                        <p>session.owner</p>
+                                    </ion-label>
+
+                                    <ion-label class="ion-text-end">
+                                        <p>session.members</p>
+                                    </ion-label>
+
+                                    <ion-label class="ion-text-end ion-margin-end">
+                                        <ion-icon name="people-outline" slot="icon-only"></ion-icon>
+                                    </ion-label>
+                                </ion-item>
+                            </ion-list>
+                        </ion-col>
+                    </ion-row>
+                </ion-grid>
             </ion-content>
 
-            <ion-content id="page-create" class="ion-padding display">
+            <ion-content id="page-create" class="ion-padding hidden">
                 <form>
                     <ion-grid>
                         <ion-row>

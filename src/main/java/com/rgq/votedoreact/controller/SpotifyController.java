@@ -1,19 +1,23 @@
 package com.rgq.votedoreact.controller;
 
 import com.rgq.votedoreact.dto.AccessDTO;
-import com.rgq.votedoreact.dto.UserDTO;
+import com.rgq.votedoreact.model.User;
 import com.rgq.votedoreact.service.SpotifyService;
+import com.rgq.votedoreact.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/spotify")
 public class SpotifyController {
     private SpotifyService service;
+    private UserService userService;
 
-    public SpotifyController(SpotifyService service) {
+    public SpotifyController(SpotifyService service, UserService userService) {
         this.service = service;
+        this.userService = userService;
     }
 
     @GetMapping("/auth")
@@ -22,11 +26,11 @@ public class SpotifyController {
     }
 
     @PostMapping("/token")
-    public ResponseEntity<?> getToken(@RequestBody AccessDTO accessDTO) {
-        // wip: Set access token in spotify service
-        if(accessDTO.getAccessToken().equals("asdf")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid Token");
+    public Mono<ResponseEntity<?>> setToken(@RequestBody AccessDTO accessDTO) {
+        User user = service.getSpotifyUser(accessDTO.getAccessToken());
+        if(user == null) {
+            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid Token"));
         }
-        return ResponseEntity.ok(new UserDTO("rg_quiet"));
+        return userService.save(user).map(dto -> ResponseEntity.ok(dto));
     }
 }

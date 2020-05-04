@@ -1,5 +1,6 @@
 package com.rgq.votedoreact.service;
 
+import com.rgq.votedoreact.dto.UserDTO;
 import com.rgq.votedoreact.model.User;
 import com.rgq.votedoreact.repo.UserRepo;
 import org.springframework.stereotype.Service;
@@ -15,5 +16,13 @@ public class UserService {
 
     public Mono<User> getById(String id) {
         return repo.findById(id);
+    }
+
+    public Mono<UserDTO> save(User user) {
+        return repo.save(user).map(saved -> userDTOMapper(saved));
+    }
+
+    private UserDTO userDTOMapper(User user) {
+        return new UserDTO(user.getId(), user.getUsername(), user.getImgUrl());
     }
 }
