@@ -98,3 +98,5 @@ function onCreateSession() {
         }
     });
 }
+
+/* Page: 'session' */

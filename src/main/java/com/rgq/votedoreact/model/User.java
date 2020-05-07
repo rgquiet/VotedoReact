@@ -2,11 +2,11 @@ package com.rgq.votedoreact.model;
 
 import lombok.*;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
 
-@Data
 @Getter
 @Setter
 @AllArgsConstructor
@@ -20,4 +20,6 @@ public class User {
     private String imgUrl;
     private String accessToken;
     private Date expiresAt;
+    @DBRef
+    private Session mySession;
 }

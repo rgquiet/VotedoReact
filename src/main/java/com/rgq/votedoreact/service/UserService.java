@@ -18,11 +18,11 @@ public class UserService {
         return repo.findById(id);
     }
 
-    public Mono<UserDTO> save(User user) {
-        return repo.save(user).map(saved -> userDTOMapper(saved));
+    public Mono<User> save(User user) {
+        return repo.save(user);
     }
 
-    private UserDTO userDTOMapper(User user) {
+    public UserDTO userDTOMapper(User user) {
         return new UserDTO(user.getId(), user.getUsername(), user.getImgUrl());
     }
 }

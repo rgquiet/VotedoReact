@@ -18,11 +18,11 @@ public class SessionService {
         return repo.findById(id);
     }
 
-    public Mono<SessionDTO> save(Session session) {
-        return repo.save(session).map(saved -> sessionDTOMapper(saved));
+    public Mono<Session> save(Session session) {
+        return repo.save(session);
     }
 
-    private SessionDTO sessionDTOMapper(Session session) {
+    public SessionDTO sessionDTOMapper(Session session) {
         return new SessionDTO(session.getId(), session.getName());
     }
 }

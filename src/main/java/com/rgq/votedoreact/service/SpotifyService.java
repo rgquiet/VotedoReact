@@ -38,7 +38,8 @@ public class SpotifyService {
                         userProfile.getEmail(),
                         userProfile.getImages()[0].getUrl(),
                         dto.getAccessToken(),
-                        new Date(dto.getTimestamp())
+                        new Date(dto.getTimestamp()),
+                        null
                     );
                 } else {
                     return new com.rgq.votedoreact.model.User(
@@ -47,7 +48,8 @@ public class SpotifyService {
                         userProfile.getEmail(),
                         null,
                         dto.getAccessToken(),
-                        new Date(dto.getTimestamp())
+                        new Date(dto.getTimestamp()),
+                        null
                     );
                 }
             }).get();
