@@ -3,9 +3,21 @@ const api = home + 'api/';
 let signIn = false;
 
 $(function() {
+    if(window.sessionStorage.getItem('displayPage')) {
+        showMe(window.sessionStorage.getItem('displayPage'));
+    }
     checkAccessToken();
-    subscribePublicSession();
 });
+
+function showMe(pageName) {
+    $('.display').each(function() {
+        $(this).removeClass('display');
+        $(this).addClass('hidden');
+    });
+    $('#page-' + pageName).addClass('display');
+    $('#page-' + pageName).removeClass('hidden');
+    window.sessionStorage.setItem('displayPage', pageName);
+}
 
 function checkAccessToken() {
     let url = window.location.href.replace('#', '?');
@@ -17,7 +29,8 @@ function checkAccessToken() {
             dataType: 'json',
             contentType: 'application/json; charset=utf-8',
             data: JSON.stringify({
-                accessToken: params.get('access_token')
+                accessToken: params.get('access_token'),
+                timestamp: Math.round(new Date().getTime() / 1000 + params.get('expires_in'))
             }),
             statusCode: {
                 403: function(xhr) {
@@ -26,6 +39,7 @@ function checkAccessToken() {
             },
             success: function(response) {
                 signIn = true;
+                window.sessionStorage.setItem('userId', response['id']);
                 $('#userName').text(response['username']);
                 if(response['imgUrl']) {
                     $('#userImg').attr('src', response['imgUrl']);
@@ -46,17 +60,9 @@ function implicitGrantFlow() {
                 window.location.replace(url);
             }
         });
+    } else {
+        window.sessionStorage.removeItem('displayPage')
     }
-}
-
-function showMe(page) {
-    $('.display').each(function() {
-        $(this).removeClass('display');
-        $(this).addClass('hidden');
-    });
-    let pageName = $(page).attr('name');
-    $('#page-' + pageName).addClass('display');
-    $('#page-' + pageName).removeClass('hidden');
 }
 
 /* Page: 'home' */
@@ -65,6 +71,30 @@ function subscribePublicSession() {
 }
 
 /* Page: 'create' */
+$('#sessionName').change(function() {
+    if($(this).val().length > 2 && $(this).val().length < 26) {
+        $('#sessionNameWarning').addClass('hidden');
+        $('#sessionCreate').prop('disabled', false);
+    } else {
+        $('#sessionNameWarning').removeClass('hidden');
+        $('#sessionCreate').prop('disabled', true);
+    }
+});
+
 function onCreateSession() {
-    // wip: Send to backend
+    $.ajax({
+        type: 'POST',
+        url: api + 'session/create',
+        dataType: 'json',
+        contentType: 'application/json; charset=utf-8',
+        // wip: if($('#sessionOpen').is(':checked'))
+        data: JSON.stringify({
+            userId: window.sessionStorage.getItem('userId'),
+            name: $('#sessionName').val(),
+            invitations: ['invitation1', 'invitation2']
+        }),
+        success: function(response) {
+            console.log(response);
+        }
+    });
 }

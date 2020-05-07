@@ -1,6 +1,7 @@
 package com.rgq.votedoreact.service;
 
 import com.rgq.votedoreact.config.SpotifyAuthConfig;
+import com.rgq.votedoreact.dto.AccessDTO;
 import com.wrapper.spotify.SpotifyApi;
 import com.wrapper.spotify.model_objects.specification.User;
 import com.wrapper.spotify.requests.data.users_profile.GetCurrentUsersProfileRequest;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Date;
 import java.util.concurrent.*;
 
 @Service
@@ -23,8 +25,8 @@ public class SpotifyService {
         return url;
     }
 
-    public com.rgq.votedoreact.model.User getSpotifyUser(String accessToken) {
-        SpotifyApi api = new SpotifyApi.Builder().setAccessToken(accessToken).build();
+    public com.rgq.votedoreact.model.User getSpotifyUser(AccessDTO dto) {
+        SpotifyApi api = new SpotifyApi.Builder().setAccessToken(dto.getAccessToken()).build();
         GetCurrentUsersProfileRequest userRequest = api.getCurrentUsersProfile().build();
         try {
             final CompletableFuture<User> future = userRequest.executeAsync();
@@ -35,7 +37,8 @@ public class SpotifyService {
                         userProfile.getDisplayName(),
                         userProfile.getEmail(),
                         userProfile.getImages()[0].getUrl(),
-                        accessToken
+                        dto.getAccessToken(),
+                        new Date(dto.getTimestamp())
                     );
                 } else {
                     return new com.rgq.votedoreact.model.User(
@@ -43,7 +46,8 @@ public class SpotifyService {
                         userProfile.getDisplayName(),
                         userProfile.getEmail(),
                         null,
-                        accessToken
+                        dto.getAccessToken(),
+                        new Date(dto.getTimestamp())
                     );
                 }
             }).get();

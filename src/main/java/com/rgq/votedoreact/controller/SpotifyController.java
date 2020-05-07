@@ -27,10 +27,10 @@ public class SpotifyController {
 
     @PostMapping("/token")
     public Mono<ResponseEntity<?>> setToken(@RequestBody AccessDTO accessDTO) {
-        User user = service.getSpotifyUser(accessDTO.getAccessToken());
+        User user = service.getSpotifyUser(accessDTO);
         if(user == null) {
             return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid Token"));
         }
-        return userService.save(user).map(dto -> ResponseEntity.ok(dto));
+        return userService.save(user).map(ResponseEntity::ok);
     }
 }

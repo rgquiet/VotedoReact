@@ -7,7 +7,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class AccessDTO {
-    private String accessToken;
-    private long timestamp;
+public class CreateSessionDTO {
+    private String userId;
+    private String name;
+    private String[] invitations;
 }

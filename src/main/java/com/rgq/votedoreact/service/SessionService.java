@@ -1,5 +1,6 @@
 package com.rgq.votedoreact.service;
 
+import com.rgq.votedoreact.dto.SessionDTO;
 import com.rgq.votedoreact.model.Session;
 import com.rgq.votedoreact.repo.SessionRepo;
 import org.springframework.stereotype.Service;
@@ -15,5 +16,13 @@ public class SessionService {
 
     public Mono<Session> getById(String id) {
         return repo.findById(id);
+    }
+
+    public Mono<SessionDTO> save(Session session) {
+        return repo.save(session).map(saved -> sessionDTOMapper(saved));
+    }
+
+    private SessionDTO sessionDTOMapper(Session session) {
+        return new SessionDTO(session.getId(), session.getName());
     }
 }
