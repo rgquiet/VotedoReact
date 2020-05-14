@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.concurrent.*;
 
@@ -31,27 +32,20 @@ public class SpotifyService {
         try {
             final CompletableFuture<User> future = userRequest.executeAsync();
             return future.thenApply(userProfile -> {
+                com.rgq.votedoreact.model.User user = new com.rgq.votedoreact.model.User(
+                    userProfile.getId(),
+                    null,
+                    userProfile.getDisplayName(),
+                    userProfile.getEmail(),
+                    "https://image.gala.de/22033424/3x2-940-627/4d877474228396b51c0d7d71679edd9e/fN/nicolas-cage.jpg",
+                    dto.getAccessToken(),
+                    new Date(dto.getTimestamp()),
+                    new ArrayList<>()
+                );
                 if(userProfile.getImages().length > 0) {
-                    return new com.rgq.votedoreact.model.User(
-                        userProfile.getId(),
-                        userProfile.getDisplayName(),
-                        userProfile.getEmail(),
-                        userProfile.getImages()[0].getUrl(),
-                        dto.getAccessToken(),
-                        new Date(dto.getTimestamp()),
-                        null
-                    );
-                } else {
-                    return new com.rgq.votedoreact.model.User(
-                        userProfile.getId(),
-                        userProfile.getDisplayName(),
-                        userProfile.getEmail(),
-                        null,
-                        dto.getAccessToken(),
-                        new Date(dto.getTimestamp()),
-                        null
-                    );
+                    user.setImgUrl(userProfile.getImages()[0].getUrl());
                 }
+                return user;
             }).get();
         } catch(InterruptedException e) {
             logger.error("{}", e);

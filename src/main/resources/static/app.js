@@ -30,11 +30,13 @@ function checkAccessToken() {
             contentType: 'application/json; charset=utf-8',
             data: JSON.stringify({
                 accessToken: params.get('access_token'),
-                timestamp: Math.round(new Date().getTime() / 1000 + params.get('expires_in'))
+                timestamp: new Date().getTime() + Number(params.get('expires_in')) * 1000
             }),
             statusCode: {
                 403: function(xhr) {
                     console.log(xhr['responseText']);
+                    window.sessionStorage.clear();
+                    window.location.reload(true);
                 }
             },
             success: function(response) {
@@ -81,20 +83,60 @@ $('#sessionName').change(function() {
     }
 });
 
+$('#sessionOpen').click(function() {
+    if($(this).attr('class').search('checkbox-checked') == -1) {
+        $.ajax({
+            type: 'GET',
+            url: api + 'user/friends/' + sessionStorage.getItem('userId'),
+            contentType: 'application/json; charset=utf-8',
+            success: function(response) {
+                if(response.length > 0) {
+                    $.each(response, function(i){
+                        $('#sessionFriends').append(
+                            '<ion-item id="' +
+                            response[i].id +
+                            '"><ion-thumbnail><ion-img src="' +
+                            response[i].imgUrl +
+                            '"></ion-img></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
+                            response[i].username +
+                            '</h2></ion-label></ion-item>'
+                        );
+                    });
+                } else {
+                    $('#sessionFriends').append(
+                        '<ion-item><ion-label class="ion-text-center"><h2>' +
+                        "I'm sorry, you have no friends :(" +
+                        '</h2></ion-label></ion-item>'
+                    );
+                }
+            }
+        });
+    } else {
+        $('#sessionFriends').empty();
+    }
+});
+
 function onCreateSession() {
     $.ajax({
         type: 'POST',
         url: api + 'session/create',
         dataType: 'json',
         contentType: 'application/json; charset=utf-8',
-        // wip: if($('#sessionOpen').is(':checked'))
         data: JSON.stringify({
             userId: window.sessionStorage.getItem('userId'),
             name: $('#sessionName').val(),
-            invitations: ['invitation1', 'invitation2']
+            invitations: null
         }),
+        statusCode: {
+            403: function(xhr) {
+                console.log(xhr['responseText']);
+                showMe('session');
+            }
+        },
         success: function(response) {
+            // wip...
             console.log(response);
+            showMe('session');
         }
     });
 }

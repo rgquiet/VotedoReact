@@ -48,7 +48,7 @@
             </ion-header>
 
             <ion-content id="page-home" class="ion-padding display">
-                <!-- wip... -->
+                <!-- wip: remove dummy data -->
                 <ion-grid>
                     <ion-row>
                         <ion-col size="12" size-sm="8" offset-sm="2">
@@ -98,6 +98,8 @@
                                     <ion-label>Private</ion-label>
                                 </ion-item>
 
+                                <ion-list id="sessionFriends"></ion-list>
+
                                 <ion-button id="sessionCreate" color="primary" expand="block"
                                             disabled="disabled" onclick="onCreateSession();">Create</ion-button>
                             </ion-col>
@@ -108,6 +110,10 @@
 
             <ion-content id="page-friends" class="ion-padding hidden">
                 <ion-title>Friends</ion-title>
+            </ion-content>
+
+            <ion-content id="page-session" class="ion-padding hidden">
+                <ion-title>Session</ion-title>
             </ion-content>
 
             <ion-tab-bar slot="bottom">

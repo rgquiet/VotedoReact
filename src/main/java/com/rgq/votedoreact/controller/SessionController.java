@@ -25,15 +25,16 @@ public class SessionController {
     public Mono<ResponseEntity<?>> createSession(@RequestBody CreateSessionDTO createSessionDTO) {
         return userService.getById(createSessionDTO.getUserId())
             .flatMap(user -> {
-                if(user.getMySession() == null) {
+                if(user.getSessionId() == null) {
                     return service.save(new Session(null, createSessionDTO.getName(), user))
                         .map(session -> {
-                            user.setMySession(session);
-                            userService.save(user);
+                            user.setSessionId(session.getId());
+                            userService.save(user).subscribe();
                             return service.sessionDTOMapper(session);
                         });
                 }
-                return Mono.just("Already in a session");
+                // User already in a session
+                return Mono.just(user.getSessionId());
             })
             .map(response -> {
                 if(response instanceof SessionDTO) {

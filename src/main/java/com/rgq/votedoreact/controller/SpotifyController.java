@@ -32,10 +32,12 @@ public class SpotifyController {
             return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid Token"));
         }
         // Check if user already exists in db
-        // If this is the case, don't update field 'mySession'
-        return userService.getById(user.getId()).switchIfEmpty(Mono.just(user))
+        // If this is the case, don't update fields 'sessionId', 'friends'
+        return userService.getById(user.getId())
+            .switchIfEmpty(Mono.just(user))
             .flatMap(response -> {
-                user.setMySession(response.getMySession());
+                user.setSessionId(response.getSessionId());
+                user.setFriends(response.getFriends());
                 return userService.save(user);
             })
             .map(response -> ResponseEntity.ok(userService.userDTOMapper(response)));

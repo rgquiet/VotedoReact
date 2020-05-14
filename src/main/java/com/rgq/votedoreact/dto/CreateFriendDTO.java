@@ -7,9 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class CreateSessionDTO {
-    private String userId;
-    private String name;
-    // wip...
-    private String[] invitations;
+public class CreateFriendDTO {
+    private String id;
+    private String friendId;
 }
