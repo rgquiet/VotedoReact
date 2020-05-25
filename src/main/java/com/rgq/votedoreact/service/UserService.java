@@ -14,12 +14,12 @@ public class UserService {
         this.repo = repo;
     }
 
-    public Mono<User> getById(String id) {
-        return repo.findById(id);
-    }
-
     public Mono<User> save(User user) {
         return repo.save(user);
+    }
+
+    public Mono<User> getById(String id) {
+        return repo.findById(id);
     }
 
     public UserDTO userDTOMapper(User user) {

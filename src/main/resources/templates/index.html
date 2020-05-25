@@ -33,7 +33,10 @@
             </ion-header>
 
             <ion-content>
-                <p>wip...</p>
+                <p>wip:</p>
+                <p>Login/Logout</p>
+                <p>Invitations</p>
+                <p>Settings</p>
             </ion-content>
         </ion-menu>
 
@@ -48,30 +51,10 @@
             </ion-header>
 
             <ion-content id="page-home" class="ion-padding display">
-                <!-- wip: remove dummy data -->
                 <ion-grid>
                     <ion-row>
                         <ion-col size="12" size-sm="8" offset-sm="2">
-                            <ion-list id="publicSessionList">
-                                <ion-item class="publicSession">
-                                    <ion-thumbnail>
-                                        <ion-img src="https://media.giphy.com/media/UvOcKPHrkKSLm/giphy.gif"></ion-img>
-                                    </ion-thumbnail>
-
-                                    <ion-label class="ion-margin-start">
-                                        <h2>session.title</h2>
-                                        <p>session.owner</p>
-                                    </ion-label>
-
-                                    <ion-label class="ion-text-end">
-                                        <p>session.members</p>
-                                    </ion-label>
-
-                                    <ion-label class="ion-text-end ion-margin-end">
-                                        <ion-icon name="people-outline" slot="icon-only"></ion-icon>
-                                    </ion-label>
-                                </ion-item>
-                            </ion-list>
+                            <ion-list id="publicSessionList"></ion-list>
                         </ion-col>
                     </ion-row>
                 </ion-grid>
@@ -82,6 +65,9 @@
                     <ion-grid>
                         <ion-row>
                             <ion-col size-sm="6" offset-sm="3">
+                                <ion-button id="sessionCreate" color="primary" expand="block"
+                                            disabled="disabled" onclick="onCreateSession();">Create</ion-button>
+
                                 <ion-item>
                                     <ion-label position="floating">Session Name</ion-label>
                                     <ion-input id="sessionName" type="text"></ion-input>
@@ -99,9 +85,6 @@
                                 </ion-item>
 
                                 <ion-list id="sessionFriends"></ion-list>
-
-                                <ion-button id="sessionCreate" color="primary" expand="block"
-                                            disabled="disabled" onclick="onCreateSession();">Create</ion-button>
                             </ion-col>
                         </ion-row>
                     </ion-grid>
@@ -110,6 +93,9 @@
 
             <ion-content id="page-friends" class="ion-padding hidden">
                 <ion-title>Friends</ion-title>
+                <p>wip:</p>
+                <p>Add/Delete Friends</p>
+                <p>Search Users</p>
             </ion-content>
 
             <ion-content id="page-session" class="ion-padding hidden">
@@ -117,7 +103,7 @@
             </ion-content>
 
             <ion-tab-bar slot="bottom">
-                <ion-tab-button name="home" onclick="showMe($(this).attr('name'));">
+                <ion-tab-button name="home" onclick="subPublicSession(); showMe($(this).attr('name'));">
                     <ion-label>Home</ion-label>
                     <ion-icon name="home-outline"></ion-icon>
                 </ion-tab-button>

@@ -10,4 +10,8 @@ import lombok.Setter;
 public class SessionDTO {
     private String id;
     private String name;
+    private Boolean open;
+    private String owner;
+    private String ownerImg;
+    private Integer members;
 }
