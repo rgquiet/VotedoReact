@@ -23,6 +23,6 @@ public class UserService {
     }
 
     public UserDTO userDTOMapper(User user) {
-        return new UserDTO(user.getId(), user.getUsername(), user.getImgUrl());
+        return new UserDTO(user.getId(), user.getSessionId(), user.getUsername(), user.getImgUrl());
     }
 }

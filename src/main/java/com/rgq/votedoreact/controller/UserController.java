@@ -62,10 +62,4 @@ public class UserController {
                 }
             });
     }
-
-    /* test sample */
-    @GetMapping("/{id}")
-    public Mono<User> getUserById(@PathVariable String id) {
-        return service.getById(id);
-    }
 }

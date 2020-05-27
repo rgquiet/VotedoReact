@@ -9,6 +9,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class UserDTO {
     private String id;
+    private String sessionId;
     private String username;
     private String imgUrl;
 }

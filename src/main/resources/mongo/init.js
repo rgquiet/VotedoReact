@@ -17,7 +17,6 @@ db.users.insertMany([
     }
 ]);
 
-db.createCollection("sessions", { capped: true, size: 5000000, max: 10000 });
 db.sessions.insertOne({
     _id: "testsession1",
     name: "This is a test",

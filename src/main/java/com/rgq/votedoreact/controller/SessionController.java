@@ -1,13 +1,12 @@
 package com.rgq.votedoreact.controller;
 
 import com.rgq.votedoreact.dto.CreateSessionDTO;
-import com.rgq.votedoreact.dto.JoinSessionDTO;
 import com.rgq.votedoreact.dto.SessionDTO;
+import com.rgq.votedoreact.dto.UserDTO;
 import com.rgq.votedoreact.model.Session;
 import com.rgq.votedoreact.service.SessionService;
 import com.rgq.votedoreact.service.UserService;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -26,9 +25,24 @@ public class SessionController {
         this.userService = userService;
     }
 
-    @GetMapping(value = "/subPublic", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<SessionDTO> subPublicSession() {
-        return service.getSessionStream(true).map(session -> service.sessionDTOMapper(session));
+    @GetMapping("/{id}")
+    public Mono<ResponseEntity<?>> getSessionById(@PathVariable String id) {
+        return service.getById(id)
+            .switchIfEmpty(Mono.just(new Session()))
+            .map(session -> {
+                if(session.getId() == null) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No session with this id");
+                }
+                return ResponseEntity.ok(service.sessionDTOMapper(session));
+            });
+    }
+
+    @GetMapping("/findPublic/{name}")
+    public Flux<SessionDTO> findPublicSession(@PathVariable String name) {
+        if(name.equals("_")) {
+            name = "";
+        }
+        return service.getOpenByNameLike(name).map(session -> service.sessionDTOMapper(session));
     }
 
     @PostMapping("/leave/{id}")
@@ -38,20 +52,20 @@ public class SessionController {
     }
 
     @PostMapping("/join")
-    public Mono<ResponseEntity<?>> joinSession(@RequestBody JoinSessionDTO joinSessionDTO) {
-        return userService.getById(joinSessionDTO.getUserId())
+    public Mono<ResponseEntity<?>> joinSession(@RequestBody UserDTO userDTO) {
+        return userService.getById(userDTO.getId())
             .flatMap(user -> {
                 if(user.getSessionId() == null) {
-                    user.setSessionId(joinSessionDTO.getSessionId());
-                    return userService.save(user).map(savedUser -> service.getById(joinSessionDTO.getSessionId())
+                    user.setSessionId(userDTO.getSessionId());
+                    return userService.save(user)
+                        .flatMap(savedUser -> service.getById(savedUser.getSessionId()))
                         .map(session -> {
-                            session.getMembers().add(savedUser);
-                            // !!Can't update document in a capped collection!!
+                            session.getMembers().add(user);
                             service.save(session).subscribe();
                             return service.sessionDTOMapper(session);
-                        }));
+                        });
                 }
-                // wip: User already in a session
+                // User already in a session
                 return Mono.just(user.getSessionId());
             }).map(response -> {
                 if(response instanceof SessionDTO) {
@@ -78,7 +92,7 @@ public class SessionController {
                             return service.sessionDTOMapper(session);
                         });
                 }
-                // wip: User already in a session
+                // User already in a session
                 return Mono.just(user.getSessionId());
             }).map(response -> {
                 if(response instanceof SessionDTO) {
@@ -86,11 +100,5 @@ public class SessionController {
                 }
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             });
-    }
-
-    /* test sample */
-    @GetMapping("/{id}")
-    public Mono<Session> getSessionById(@PathVariable String id) {
-        return service.getById(id);
     }
 }

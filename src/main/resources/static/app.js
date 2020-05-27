@@ -1,24 +1,25 @@
 const home = 'http://localhost:8080/'; //'http://ec2-3-121-231-202.eu-central-1.compute.amazonaws.com:8080/'
 const api = home + 'api/';
-let subs = [];
 let signIn = false;
 
 $(function() {
     if(window.sessionStorage.getItem('displayPage')) {
         showMe(window.sessionStorage.getItem('displayPage'));
+    } else {
+        onPublicSession('');
     }
     checkAccessToken();
-    subPublicSession();
 });
 
 function showMe(pageName) {
+    // wip: Not so pretty
+    if(pageName === 'home') {
+        onPublicSession('');
+    }
+    // Switch display to hidden and show required page
     $('.display').each(function() {
         $(this).removeClass('display');
         $(this).addClass('hidden');
-        // Close SSE for publicSession if active
-        if($(this).attr('id') === 'page-home') {
-            checkSubAndClose('session/subPublic', true);
-        }
     });
     $('#page-' + pageName).addClass('display');
     $('#page-' + pageName).removeClass('hidden');
@@ -49,9 +50,14 @@ function checkAccessToken() {
                 signIn = true;
                 window.sessionStorage.setItem('userId', response['id']);
                 $('#userName').text(response['username']);
+                /*
                 if(response['imgUrl']) {
                     $('#userImg').attr('src', response['imgUrl']);
                     $('#userImg').parent().removeClass('hidden');
+                }
+                */
+                if(response['sessionId']) {
+                    alreadyInSession(response['sessionId']);
                 }
             }
         });
@@ -73,69 +79,60 @@ function implicitGrantFlow() {
     }
 }
 
-function checkSubAndClose(sse, close) {
-    let active = false;
-    subs.forEach(function(sub, i) {
-        if(sub.url.search(sse) !== -1) {
-            if(close) {
-                sub.close();
-                subs.splice(i);
-            } else {
-                active = true;
-            }
+/* Page: 'home' */
+function onPublicSession(name) {
+    // Empty string is not allowed
+    if(name === '') {
+        name = '_';
+    }
+    $.ajax({
+        type: 'GET',
+        url: api + 'session/findPublic/' + name,
+        dataType: 'json',
+        contentType: 'application/json; charset=utf-8',
+        success: function(response) {
+            $('#publicSessionList').empty();
+            $.each(response, function(i) {
+                $('#publicSessionList').append(
+                    '<ion-item button onclick="onJoinSession(' +
+                    "'" + response[i].id + "'" +
+                    ');"><ion-thumbnail><img src="' +
+                    response[i].ownerImg +
+                    '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
+                    response[i].name +
+                    '</h2><p>' +
+                    response[i].owner +
+                    '</p></ion-label><ion-label class="ion-text-end ion-margin-end">' +
+                    '<ion-icon name="people-outline" slot="icon-only"></ion-icon>' +
+                    response[i].members +
+                    '</ion-label></ion-item>'
+                );
+            });
         }
     });
-    return active;
 }
 
-/* Page: 'home' */
-function subPublicSession() {
-    let sse = 'session/subPublic';
-    if(!checkSubAndClose(sse, false)) {
-        let sub = new EventSource(api + sse);
-        sub.onmessage = function(event) {
-            console.log(event.data);
-            const response = JSON.parse(event.data);
-            $('#publicSessionList').append(
-                '<ion-item button onclick="onJoinSession(' +
-                "'" + response.id + "'" +
-                ');"><ion-thumbnail><img src="' +
-                response.ownerImg +
-                '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
-                response.name +
-                '</h2><p>' +
-                response.owner +
-                '</p></ion-label><ion-label class="ion-text-end ion-margin-end">' +
-                '<ion-icon name="people-outline" slot="icon-only"></ion-icon>' +
-                response.members +
-                '</ion-label></ion-item>'
-            );
-        };
-        subs.push(sub);
-    }
-}
-
-function onJoinSession(id) {
-    const userId = window.sessionStorage.getItem('userId');
-    if(userId) {
+function onJoinSession(sessionId) {
+    const id = window.sessionStorage.getItem('userId');
+    if(id) {
         $.ajax({
             type: 'POST',
             url: api + 'session/join',
             dataType: 'json',
             contentType: 'application/json; charset=utf-8',
             data: JSON.stringify({
-                userId: userId,
-                sessionId: id
+                id: id,
+                sessionId: sessionId
             }),
             statusCode: {
-                403: function (xhr) {
+                403: function(xhr) {
                     console.log(xhr['responseText']);
-                    showMe('session');
+                    // wip...
+                    alert('You are already in a session');
                 }
             },
-            success: function (response) {
-                // wip...
-                console.log(response);
+            success: function(response) {
+                showSessionContent(response);
                 showMe('session');
             }
         });
@@ -145,7 +142,7 @@ function onJoinSession(id) {
 }
 
 /* Page: 'create' */
-$('#sessionName').change(function() {
+$('#sessionName').on('input', function() {
     if($(this).val().length > 2 && $(this).val().length < 26) {
         $('#sessionNameWarning').addClass('hidden');
         $('#sessionCreate').prop('disabled', false);
@@ -155,7 +152,7 @@ $('#sessionName').change(function() {
     }
 });
 
-$('#sessionOpen').click(function() {
+$('#sessionOpen').on('click', function() {
     if($(this).attr('class').search('checkbox-checked') === -1) {
         $.ajax({
             type: 'GET',
@@ -163,7 +160,7 @@ $('#sessionOpen').click(function() {
             contentType: 'application/json; charset=utf-8',
             success: function(response) {
                 if(response.length > 0) {
-                    $.each(response, function(i){
+                    $.each(response, function(i) {
                         $('#sessionFriends').append(
                             '<ion-item><ion-thumbnail><img src="' +
                             response[i].imgUrl +
@@ -210,15 +207,36 @@ function onCreateSession() {
         statusCode: {
             403: function(xhr) {
                 console.log(xhr['responseText']);
-                showMe('session');
+                // wip...
+                alert('You are already in a session');
             }
         },
         success: function(response) {
-            // wip...
-            console.log(response);
+            showSessionContent(response);
             showMe('session');
         }
     });
 }
 
 /* Page: 'session' */
+function alreadyInSession(id) {
+    $.ajax({
+        type: 'GET',
+        url: api + 'session/' + id,
+        contentType: 'application/json; charset=utf-8',
+        statusCode: {
+            403: function (xhr) {
+                console.log(xhr['responseText']);
+            }
+        },
+        success: function(response) {
+            showSessionContent(response);
+            showMe('session');
+        }
+    });
+}
+
+function showSessionContent(session) {
+    // wip...
+    console.log(session);
+}

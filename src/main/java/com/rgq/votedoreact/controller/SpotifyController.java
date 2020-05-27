@@ -29,7 +29,7 @@ public class SpotifyController {
     public Mono<ResponseEntity<?>> setToken(@RequestBody AccessDTO accessDTO) {
         User user = service.getSpotifyUser(accessDTO);
         if(user == null) {
-            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid Token"));
+            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid token"));
         }
         // Check if user already exists in db
         // If this is the case, don't update fields 'sessionId', 'friends'

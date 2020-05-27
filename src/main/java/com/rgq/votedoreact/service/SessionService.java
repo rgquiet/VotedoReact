@@ -23,8 +23,8 @@ public class SessionService {
         return repo.findById(id);
     }
 
-    public Flux<Session> getSessionStream(Boolean open) {
-        return repo.findByOpen(open);
+    public Flux<Session> getOpenByNameLike(String name) {
+        return repo.findAllByOpenAndNameLike(true, name);
     }
 
     public SessionDTO sessionDTOMapper(Session session) {
