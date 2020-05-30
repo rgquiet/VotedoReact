@@ -10,6 +10,5 @@ import lombok.Setter;
 public class CreateSessionDTO {
     private String userId;
     private String name;
-    // wip...
     private String[] invitations;
 }

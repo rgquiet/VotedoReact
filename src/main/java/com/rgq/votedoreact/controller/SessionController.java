@@ -26,15 +26,10 @@ public class SessionController {
     }
 
     @GetMapping("/{id}")
-    public Mono<ResponseEntity<?>> getSessionById(@PathVariable String id) {
+    public Mono<ResponseEntity<SessionDTO>> getSessionById(@PathVariable String id) {
         return service.getById(id)
-            .switchIfEmpty(Mono.just(new Session()))
-            .map(session -> {
-                if(session.getId() == null) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No session with this id");
-                }
-                return ResponseEntity.ok(service.sessionDTOMapper(session));
-            });
+            .map(session -> ResponseEntity.ok(service.sessionDTOMapper(session)))
+            .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/findPublic/{name}")
@@ -80,17 +75,29 @@ public class SessionController {
         return userService.getById(createSessionDTO.getUserId())
             .flatMap(user -> {
                 if(user.getSessionId() == null) {
+                    Boolean open = false;
+                    if(createSessionDTO.getInvitations() == null) {
+                        open = true;
+                    }
                     return service.save(new Session(
-                            null,
-                            createSessionDTO.getName(),
-                            true,
-                            user,
-                            new ArrayList<>()
-                        )).map(session -> {
-                            user.setSessionId(session.getId());
-                            userService.save(user).subscribe();
-                            return service.sessionDTOMapper(session);
-                        });
+                        null,
+                        createSessionDTO.getName(),
+                        open,
+                        user,
+                        new ArrayList<>()
+                    )).map(session -> {
+                        user.setSessionId(session.getId());
+                        userService.save(user).subscribe();
+                        for(int i = 0; i < createSessionDTO.getInvitations().length; i++) {
+                            service.sendInvitation(
+                                session.getId(),
+                                session.getName(),
+                                user.getUsername(),
+                                createSessionDTO.getInvitations()[i]
+                            );
+                        }
+                        return service.sessionDTOMapper(session);
+                    });
                 }
                 // User already in a session
                 return Mono.just(user.getSessionId());

@@ -8,10 +8,5 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 public class ExistDTO {
-    private boolean exist;
-
-    // wip: Why @Getter doesn't work?
-    public boolean getExist() {
-        return exist;
-    }
+    private Boolean exist;
 }

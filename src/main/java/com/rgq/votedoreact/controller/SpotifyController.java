@@ -3,6 +3,7 @@ package com.rgq.votedoreact.controller;
 import com.rgq.votedoreact.dto.AccessDTO;
 import com.rgq.votedoreact.model.User;
 import com.rgq.votedoreact.service.SpotifyService;
+import com.rgq.votedoreact.service.SseService;
 import com.rgq.votedoreact.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,10 +15,12 @@ import reactor.core.publisher.Mono;
 public class SpotifyController {
     private SpotifyService service;
     private UserService userService;
+    private SseService sseService;
 
-    public SpotifyController(SpotifyService service, UserService userService) {
+    public SpotifyController(SpotifyService service, UserService userService, SseService sseService) {
         this.service = service;
         this.userService = userService;
+        this.sseService = sseService;
     }
 
     @GetMapping("/auth")
@@ -31,15 +34,20 @@ public class SpotifyController {
         if(user == null) {
             return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid token"));
         }
-        // Check if user already exists in db
-        // If this is the case, don't update fields 'sessionId', 'friends'
-        return userService.getById(user.getId())
-            .switchIfEmpty(Mono.just(user))
-            .flatMap(response -> {
-                user.setSessionId(response.getSessionId());
-                user.setFriends(response.getFriends());
+        return sseService.existCollectionWithName(user.getId()).flatMap(exist -> {
+            // Check if user already exists in db
+            if(exist) {
+                return userService.getById(user.getId()).flatMap(response -> {
+                    // Keep existing fields 'sessionId', 'friends'
+                    user.setSessionId(response.getSessionId());
+                    user.setFriends(response.getFriends());
+                    return userService.save(user);
+                });
+            } else {
+                // Create new capped Collection for user
+                sseService.createCollectionWithName(user.getId());
                 return userService.save(user);
-            })
-            .map(response -> ResponseEntity.ok(userService.userDTOMapper(response)));
+            }
+        }).map(savedUser -> ResponseEntity.ok(userService.userDTOMapper(savedUser)));
     }
 }

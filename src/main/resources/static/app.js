@@ -1,6 +1,7 @@
 const home = 'http://localhost:8080/'; //'http://ec2-3-121-231-202.eu-central-1.compute.amazonaws.com:8080/'
 const api = home + 'api/';
 let signIn = false;
+let sse = null;
 
 $(function() {
     if(window.sessionStorage.getItem('displayPage')) {
@@ -9,6 +10,12 @@ $(function() {
         onPublicSession('');
     }
     checkAccessToken();
+});
+
+$(window).on('beforeunload', function(){
+    if(sse) {
+        sse.close();
+    }
 });
 
 function showMe(pageName) {
@@ -56,6 +63,8 @@ function checkAccessToken() {
                     $('#userImg').parent().removeClass('hidden');
                 }
                 */
+                sse = new EventSource(api + 'user/sub/' + response['id']);
+                sse.onmessage = function(event) { onEvent(event); }
                 if(response['sessionId']) {
                     alreadyInSession(response['sessionId']);
                 }
@@ -77,6 +86,11 @@ function implicitGrantFlow() {
     } else {
         window.sessionStorage.removeItem('displayPage')
     }
+}
+
+function onEvent(event) {
+    // wip...
+    console.log(event);
 }
 
 /* Page: 'home' */
@@ -225,7 +239,7 @@ function alreadyInSession(id) {
         url: api + 'session/' + id,
         contentType: 'application/json; charset=utf-8',
         statusCode: {
-            403: function (xhr) {
+            404: function(xhr) {
                 console.log(xhr['responseText']);
             }
         },

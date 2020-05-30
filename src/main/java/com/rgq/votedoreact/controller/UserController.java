@@ -3,9 +3,12 @@ package com.rgq.votedoreact.controller;
 import com.rgq.votedoreact.dto.CreateFriendDTO;
 import com.rgq.votedoreact.dto.ExistDTO;
 import com.rgq.votedoreact.dto.FriendDTO;
+import com.rgq.votedoreact.model.Event;
 import com.rgq.votedoreact.model.User;
+import com.rgq.votedoreact.service.SseService;
 import com.rgq.votedoreact.service.UserService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -17,9 +20,16 @@ import java.util.List;
 @RequestMapping("/api/user")
 public class UserController {
     private UserService service;
+    private SseService sseService;
 
-    public UserController(UserService service) {
+    public UserController(UserService service, SseService sseService) {
         this.service = service;
+        this.sseService = sseService;
+    }
+
+    @GetMapping(value = "/sub/{name}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<Event> subEventStream(@PathVariable String name) {
+        return sseService.subCollectionByName(name);
     }
 
     @GetMapping("/friends/{id}")
