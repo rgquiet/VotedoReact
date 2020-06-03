@@ -1,8 +1,6 @@
 package com.rgq.votedoreact.controller;
 
-import com.rgq.votedoreact.dto.CreateFriendDTO;
-import com.rgq.votedoreact.dto.ExistDTO;
-import com.rgq.votedoreact.dto.FriendDTO;
+import com.rgq.votedoreact.dto.*;
 import com.rgq.votedoreact.model.Event;
 import com.rgq.votedoreact.model.User;
 import com.rgq.votedoreact.service.SseService;
@@ -71,5 +69,13 @@ public class UserController {
                     return ResponseEntity.ok(createFriendDTO.getFriendId() + " saved");
                 }
             });
+    }
+
+    @GetMapping("/findUser/{name}")
+    public Flux<UserDTO> findUser(@PathVariable String name) {
+        if(name.equals("_")) {
+            name = "";
+        }
+        return service.getByUsernameLike(name).map(user -> service.userDTOMapper(user));
     }
 }
