@@ -14,6 +14,5 @@ public class Event {
     @Id
     private String id;
     private Boolean status;
-    private EventType type;
     private String message;
 }

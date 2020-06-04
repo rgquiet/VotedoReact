@@ -42,6 +42,10 @@ public class SseService {
         return template.save(event, name);
     }
 
+    public Mono<Event> getById(String id, String name) {
+        return template.findById(id, Event.class, name);
+    }
+
     public Flux<Event> subCollectionByName(String name) {
         return template.tail(new Query().addCriteria(Criteria.where("status").is(true)), Event.class, name);
     }

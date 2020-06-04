@@ -2,7 +2,6 @@ package com.rgq.votedoreact.service;
 
 import com.rgq.votedoreact.dto.SessionDTO;
 import com.rgq.votedoreact.model.Event;
-import com.rgq.votedoreact.model.EventType;
 import com.rgq.votedoreact.model.Session;
 import com.rgq.votedoreact.repo.SessionRepo;
 import org.springframework.stereotype.Service;
@@ -35,9 +34,8 @@ public class SessionService {
         sse.saveOrUpdateEvent(
             new Event(
                 sessionId,
-                false,
-                EventType.SESSION,
-                username + " invites you to his private Session " + session
+                true,
+                username + " invites you to his private session: " + session
             ),
             userId)
         .subscribe();

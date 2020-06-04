@@ -75,10 +75,7 @@ public class SessionController {
         return userService.getById(createSessionDTO.getUserId())
             .flatMap(user -> {
                 if(user.getSessionId() == null) {
-                    Boolean open = false;
-                    if(createSessionDTO.getInvitations() == null) {
-                        open = true;
-                    }
+                    final Boolean open = (createSessionDTO.getInvitations() == null);
                     return service.save(new Session(
                         null,
                         createSessionDTO.getName(),
@@ -88,13 +85,15 @@ public class SessionController {
                     )).map(session -> {
                         user.setSessionId(session.getId());
                         userService.save(user).subscribe();
-                        for(int i = 0; i < createSessionDTO.getInvitations().length; i++) {
-                            service.sendInvitation(
-                                session.getId(),
-                                session.getName(),
-                                user.getUsername(),
-                                createSessionDTO.getInvitations()[i]
-                            );
+                        if(!open) {
+                            for(int i = 0; i < createSessionDTO.getInvitations().length; i++) {
+                                service.sendInvitation(
+                                    session.getId(),
+                                    session.getName(),
+                                    user.getUsername(),
+                                    createSessionDTO.getInvitations()[i]
+                                );
+                            }
                         }
                         return service.sessionDTOMapper(session);
                     });

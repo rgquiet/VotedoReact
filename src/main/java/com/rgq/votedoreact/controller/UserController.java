@@ -30,6 +30,14 @@ public class UserController {
         return sseService.subCollectionByName(name);
     }
 
+    @GetMapping("/findUser/{name}")
+    public Flux<UserDTO> findUser(@PathVariable String name) {
+        if(name.equals("_")) {
+            name = "";
+        }
+        return service.getByUsernameLike(name).map(user -> service.userDTOMapper(user));
+    }
+
     @GetMapping("/friends/{id}")
     public Mono<ResponseEntity<List<FriendDTO>>> getFriendsById(@PathVariable String id) {
         return service.getById(id)
@@ -71,11 +79,11 @@ public class UserController {
             });
     }
 
-    @GetMapping("/findUser/{name}")
-    public Flux<UserDTO> findUser(@PathVariable String name) {
-        if(name.equals("_")) {
-            name = "";
-        }
-        return service.getByUsernameLike(name).map(user -> service.userDTOMapper(user));
+    @PostMapping("/closeEvent")
+    public void closeEvent(@RequestBody UserDTO dto) {
+        sseService.getById(dto.getSessionId(), dto.getId()).subscribe(event -> {
+            event.setStatus(false);
+            sseService.saveOrUpdateEvent(event, dto.getId()).subscribe();
+        });
     }
 }

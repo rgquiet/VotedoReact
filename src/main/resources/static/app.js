@@ -100,8 +100,44 @@ function showMe(pageName) {
 }
 
 function onEvent(event) {
-    // wip...
-    console.log(event);
+    const response = JSON.parse(event.data);
+    $('#invitations').append(
+        '<ion-card><ion-card-content class="ion-text-center" style="padding-bottom: 0px;">' +
+        '<h2 style="font-weight: bold; padding-bottom: 5px;">Session Invitation</h2>' +
+        response['message'] +
+        '</ion-card-content><ion-item id="' +
+        response['id'] +
+        '"><ion-button fill="outline" slot="start" onclick="acceptInvitation($(this));">' +
+        '<ion-icon name="checkmark-outline"></ion-icon>accept</ion-button>' +
+        '<ion-button fill="outline" slot="end" onclick="rejectInvitation($(this));">' +
+        '<ion-icon name="close-outline"></ion-icon>reject</ion-button></ion-item></ion-card>'
+    );
+}
+
+function closeEvent(sessionId) {
+    const id = window.sessionStorage.getItem('userId');
+    $.ajax({
+        type: 'POST',
+        url: api + 'user/closeEvent',
+        contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify({
+            id: id,
+            sessionId: sessionId
+        })
+    });
+}
+
+function acceptInvitation(tag) {
+    let sessionId = tag.parent().attr('id');
+    onJoinSession(sessionId);
+    closeEvent(sessionId)
+    tag.parent().parent().remove();
+}
+
+function rejectInvitation(tag) {
+    let sessionId = tag.parent().attr('id');
+    closeEvent(sessionId);
+    tag.parent().parent().remove();
 }
 
 /* Page: 'home' */
@@ -296,22 +332,23 @@ function onSearchFriend(name) {
         success: function(response) {
             $('#userList').empty();
             $.each(response, function(i) {
-                $('#userList').append(
-                    '<ion-item button onclick="onInviteFriend(' +
-                    "'" + response[i].id + "'" +
-                    ');"><ion-thumbnail><img src="' +
-                    response[i].imgUrl +
-                    '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
-                    response[i].username +
-                    '</h2></ion-label></ion-item>'
-                );
+                if(sessionStorage.getItem('userId') !== response[i].id) {
+                    $('#userList').append(
+                        '<ion-item button onclick="onInviteFriend(' +
+                        "'" + response[i].id + "'" +
+                        ');"><ion-thumbnail><img src="' +
+                        response[i].imgUrl +
+                        '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
+                        response[i].username +
+                        '</h2></ion-label></ion-item>'
+                    );
+                }
             });
         }
     });
 }
 
 function onMyFriends() {
-    // wip: Use this as callback after implicitGrantFlow
     $.ajax({
         type: 'GET',
         url: api + 'user/friends/' + sessionStorage.getItem('userId'),
