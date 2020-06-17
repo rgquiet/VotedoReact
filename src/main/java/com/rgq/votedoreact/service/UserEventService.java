@@ -1,7 +1,6 @@
 package com.rgq.votedoreact.service;
 
-import com.rgq.votedoreact.model.Event;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.rgq.votedoreact.sse.UserSSE;
 import org.springframework.data.mongodb.core.CollectionOptions;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -11,11 +10,10 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
-public class SseService {
+public class UserEventService {
     private ReactiveMongoTemplate template;
 
-    @Autowired
-    public SseService(ReactiveMongoTemplate template) {
+    public UserEventService(ReactiveMongoTemplate template) {
         this.template = template;
     }
 
@@ -38,15 +36,15 @@ public class SseService {
         return template.collectionExists(name);
     }
 
-    public Mono<Event> saveOrUpdateEvent(Event event, String name) {
-        return template.save(event, name);
+    public Mono<UserSSE> saveOrUpdateEvent(UserSSE userSSE, String name) {
+        return template.save(userSSE, name);
     }
 
-    public Mono<Event> getById(String id, String name) {
-        return template.findById(id, Event.class, name);
+    public Mono<UserSSE> getById(String id, String name) {
+        return template.findById(id, UserSSE.class, name);
     }
 
-    public Flux<Event> subCollectionByName(String name) {
-        return template.tail(new Query().addCriteria(Criteria.where("status").is(true)), Event.class, name);
+    public Flux<UserSSE> subCollectionByName(String name) {
+        return template.tail(new Query().addCriteria(Criteria.where("status").is(true)), UserSSE.class, name);
     }
 }

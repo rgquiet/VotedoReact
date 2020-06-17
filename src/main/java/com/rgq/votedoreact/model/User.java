@@ -9,13 +9,14 @@ import java.util.List;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Document(collection = "users")
 public class User {
     @Id
     private String id;
     private String sessionId;
+    private String trackId;
     private String username;
     private String email;
     private String imgUrl;

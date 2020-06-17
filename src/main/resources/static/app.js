@@ -1,10 +1,12 @@
 const home = 'http://localhost:8080/'; //'http://ec2-3-121-231-202.eu-central-1.compute.amazonaws.com:8080/'
 const api = home + 'api/';
-let sse = null;
+let currentModal = null;
+let userSse = null;
+let sessionSse = null;
 
 $(window).on('beforeunload', function() {
-    if(sse) {
-        sse.close();
+    if(userSse) {
+        userSse.close();
     }
 });
 
@@ -46,8 +48,8 @@ function checkAccessToken() {
                     $('#userImg').parent().removeClass('hidden');
                 }
                 */
-                sse = new EventSource(api + 'user/sub/' + response['id']);
-                sse.onmessage = function(event) { onEvent(event); }
+                userSse = new EventSource(api + 'user/sub/' + response['id']);
+                userSse.onmessage = function(event) { onUserEvent(event); }
                 if(response['sessionId']) {
                     alreadyInSession(response['sessionId']);
                 }
@@ -99,7 +101,7 @@ function showMe(pageName) {
     window.sessionStorage.setItem('displayPage', pageName);
 }
 
-function onEvent(event) {
+function onUserEvent(event) {
     const response = JSON.parse(event.data);
     $('#invitations').append(
         '<ion-card><ion-card-content class="ion-text-center" style="padding-bottom: 0px;">' +
@@ -114,7 +116,7 @@ function onEvent(event) {
     );
 }
 
-function closeEvent(sessionId) {
+function closeUserEvent(sessionId) {
     const id = window.sessionStorage.getItem('userId');
     $.ajax({
         type: 'POST',
@@ -130,13 +132,13 @@ function closeEvent(sessionId) {
 function acceptInvitation(tag) {
     let sessionId = tag.parent().attr('id');
     onJoinSession(sessionId);
-    closeEvent(sessionId)
+    closeUserEvent(sessionId)
     tag.parent().parent().remove();
 }
 
 function rejectInvitation(tag) {
     let sessionId = tag.parent().attr('id');
-    closeEvent(sessionId);
+    closeUserEvent(sessionId);
     tag.parent().parent().remove();
 }
 
@@ -280,31 +282,29 @@ function onCreateSession() {
 }
 
 /* Page: 'friends' */
-let currentModal = null;
-
-async function createModal() {
+async function createFriendModal() {
     const modal = await modalController.create({
-        component: 'modal-content'
+        component: 'modal-content-friend'
     });
     await modal.present();
     currentModal = modal;
 }
 
-function dismissModal() {
+function dismissFriendModal() {
     if(currentModal) {
         currentModal.dismiss().then(() => { currentModal = null; });
     }
     onMyFriends();
 }
 
-customElements.define('modal-content', class ModalContent extends HTMLElement {
+customElements.define('modal-content-friend', class ModalContent extends HTMLElement {
     connectedCallback() {
         this.innerHTML = `
             <ion-header>
                 <ion-toolbar>
                     <ion-title class="ion-text-center">Search Friends</ion-title>
                     <ion-buttons slot="end">
-                        <ion-button onclick="dismissModal()">
+                        <ion-button onclick="dismissFriendModal();">
                             <ion-icon name="close-outline"></ion-icon>
                         </ion-button>
                     </ion-buttons>
@@ -419,5 +419,100 @@ function alreadyInSession(id) {
 
 function showSessionContent(session) {
     // wip...
-    console.log(session);
+    sessionSse = new EventSource(api + 'session/sub/' + session['id']);
+    sessionSse.onmessage = function(event) { onSessionEvent(event); }
+}
+
+function onSessionEvent(event) {
+    const response = JSON.parse(event.data);
+    console.log(response);
+}
+
+async function createTrackModal() {
+    const modal = await modalController.create({
+        component: 'modal-content-track'
+    });
+    await modal.present();
+    currentModal = modal;
+}
+
+function dismissTrackModal() {
+    if(currentModal) {
+        currentModal.dismiss().then(() => { currentModal = null; });
+    }
+}
+
+customElements.define('modal-content-track', class ModalContent extends HTMLElement {
+    connectedCallback() {
+        this.innerHTML = `
+            <ion-header>
+                <ion-toolbar>
+                    <ion-title class="ion-text-center">Search Track</ion-title>
+                    <ion-buttons slot="end">
+                        <ion-button onclick="dismissTrackModal();">
+                            <ion-icon name="close-outline"></ion-icon>
+                        </ion-button>
+                    </ion-buttons>
+                </ion-toolbar>
+            </ion-header>
+            <ion-content class="ion-padding">
+                <ion-searchbar oninput="onSearchTrack($(this).val());"></ion-searchbar>
+                <ion-list id="trackList"></ion-list>
+            </ion-content>
+        `;
+    }
+});
+
+function onSearchTrack(name) {
+    // Empty string is not allowed
+    if(name !== '') {
+        $.ajax({
+            type: 'GET',
+            url: api + 'spotify/findTrack/' + name,
+            dataType: 'json',
+            contentType: 'application/json; charset=utf-8',
+            success: function(response) {
+                $('#trackList').empty();
+                $.each(response, function(i) {
+                    let minutes = Math.floor(response[i].timeMs / 60000);
+                    let seconds = ((response[i].timeMs % 60000) / 1000).toFixed(0);
+                    let time = minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
+                    $('#trackList').append(
+                        '<ion-item button onclick="onSelectTrack(' +
+                        "'" + response[i].id + "'" +
+                        ');"><ion-thumbnail><img src="' +
+                        response[i].imgUrl +
+                        '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
+                        response[i].name +
+                        '</h2><p>' +
+                        response[i].artist +
+                        '</p></ion-label><ion-label class="ion-text-end ion-margin-end"><p>' +
+                        time +
+                        '</p></ion-label></ion-item>'
+                    );
+                });
+            }
+        });
+    }
+}
+
+function onSelectTrack(track) {
+    $.ajax({
+        type: 'POST',
+        url: api + 'user/track',
+        dataType: 'text',
+        contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify({
+            id: window.sessionStorage.getItem('userId'),
+            trackId: track
+        }),
+        statusCode: {
+            403: function(xhr) {
+                console.log(xhr['responseText']);
+            }
+        },
+        success: function(response) {
+            console.log(response);
+        }
+    });
 }

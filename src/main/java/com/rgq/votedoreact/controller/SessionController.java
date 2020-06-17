@@ -1,13 +1,17 @@
 package com.rgq.votedoreact.controller;
 
+import com.rgq.votedoreact.config.SessionEventPublisher;
 import com.rgq.votedoreact.dto.CreateSessionDTO;
 import com.rgq.votedoreact.dto.SessionDTO;
 import com.rgq.votedoreact.dto.UserDTO;
 import com.rgq.votedoreact.model.Session;
+import com.rgq.votedoreact.service.SessionEventService;
 import com.rgq.votedoreact.service.SessionService;
 import com.rgq.votedoreact.service.UserService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -18,11 +22,22 @@ import java.util.ArrayList;
 @RequestMapping("/api/session")
 public class SessionController {
     private SessionService service;
+    private SessionEventService eventService;
     private UserService userService;
 
-    public SessionController(SessionService service, UserService userService) {
+    public SessionController(
+        SessionService service,
+        SessionEventService eventService,
+        UserService userService
+    ) {
         this.service = service;
+        this.eventService = eventService;
         this.userService = userService;
+    }
+
+    @GetMapping(value = "/sub/{name}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent> subEventStream(@PathVariable String name) {
+        return eventService.getPublishers().get(name).subPublisher();
     }
 
     @GetMapping("/{id}")
@@ -83,6 +98,8 @@ public class SessionController {
                         user,
                         new ArrayList<>()
                     )).map(session -> {
+                        // wip: Not persistent (server restart!)
+                        eventService.getPublishers().put(session.getId(), new SessionEventPublisher());
                         user.setSessionId(session.getId());
                         userService.save(user).subscribe();
                         if(!open) {

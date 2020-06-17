@@ -1,4 +1,4 @@
-package com.rgq.votedoreact.model;
+package com.rgq.votedoreact.sse;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -8,9 +8,9 @@ import org.springframework.data.annotation.Id;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
-public class Event {
+@AllArgsConstructor
+public class UserSSE {
     @Id
     private String id;
     private Boolean status;

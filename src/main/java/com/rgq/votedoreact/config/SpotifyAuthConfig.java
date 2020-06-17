@@ -9,10 +9,20 @@ public class SpotifyAuthConfig {
     private String endpoint;
     @Value("${spotify.auth.clientId}")
     private String clientId;
+    @Value("${spotify.auth.clientSecret}")
+    private String clientSecret;
     @Value("${spotify.auth.redirectUri}")
     private String redirectUri;
     @Value("${spotify.auth.scopes}")
     private String scopes;
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public String getClientSecret() {
+        return clientSecret;
+    }
 
     public String authUrl() {
         return endpoint
