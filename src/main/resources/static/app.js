@@ -418,14 +418,69 @@ function alreadyInSession(id) {
 }
 
 function showSessionContent(session) {
-    // wip...
+    // wip: Add session infos (Current track, owner, name, etc.)
     sessionSse = new EventSource(api + 'session/sub/' + session['id']);
     sessionSse.onmessage = function(event) { onSessionEvent(event); }
+    $.ajax({
+        type: 'GET',
+        url: api + 'session/getTracks/' + session['id'],
+        dataType: 'json',
+        contentType: 'application/json; charset=utf-8',
+        success: function(response) {
+            $.each(response, function(i) {
+                addToSessionTrackList(response[i]);
+            });
+        }
+    });
 }
 
 function onSessionEvent(event) {
     const response = JSON.parse(event.data);
-    console.log(response);
+    switch(response['type']) {
+        case 'TRACKCREATE':
+            addToSessionTrackList(response['dto']);
+            break;
+        case 'TRACKREMOVE':
+            onTrackRemove(response['dto']);
+            break;
+        case 'NEWVOTE':
+            onNewVote(response['dto']);
+            break;
+    }
+}
+
+function addToSessionTrackList(track) {
+    let time = msToTime(track.timeMs);
+    $('#sessionTrackList').append(
+        '<ion-item><ion-thumbnail><img src="' +
+        track.imgUrl +
+        '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
+        track.name +
+        '</h2><p>' +
+        track.artist +
+        '</p></ion-label><ion-label class="ion-text-end ion-margin-end"><p>' +
+        time +
+        '</p></ion-label><ion-button id="' +
+        // wip: Don't allow same track multiple times in a session
+        track.id +
+        '" fill="outline" slot="end" onclick="vote($(this));">' +
+        'Vote</ion-button></ion-item>'
+    );
+}
+
+function onTrackRemove(track) {
+    // wip...
+    console.log(track);
+}
+
+function onNewVote(vote) {
+    // wip...
+    console.log(vote);
+}
+
+function vote(tag) {
+    // wip...
+    console.log(tag.attr('id'));
 }
 
 async function createTrackModal() {
@@ -463,6 +518,12 @@ customElements.define('modal-content-track', class ModalContent extends HTMLElem
     }
 });
 
+function msToTime(ms) {
+    let minutes = Math.floor(ms / 60000);
+    let seconds = ((ms % 60000) / 1000).toFixed(0);
+    return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+}
+
 function onSearchTrack(name) {
     // Empty string is not allowed
     if(name !== '') {
@@ -474,13 +535,20 @@ function onSearchTrack(name) {
             success: function(response) {
                 $('#trackList').empty();
                 $.each(response, function(i) {
-                    let minutes = Math.floor(response[i].timeMs / 60000);
-                    let seconds = ((response[i].timeMs % 60000) / 1000).toFixed(0);
-                    let time = minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
+                    let time = msToTime(response[i].timeMs);
                     $('#trackList').append(
-                        '<ion-item button onclick="onSelectTrack(' +
-                        "'" + response[i].id + "'" +
-                        ');"><ion-thumbnail><img src="' +
+                        '<ion-item button onclick="onSelectTrack({' +
+                            "'" + 'id' + "'" + ':' +
+                            "'" + response[i].id + "'," +
+                            "'" + 'name' + "'" + ':' +
+                            "'" + response[i].name + "'," +
+                            "'" + 'artist' + "'" + ':' +
+                            "'" + response[i].artist + "'," +
+                            "'" + 'imgUrl' + "'" + ':' +
+                            "'" + response[i].imgUrl + "'," +
+                            "'" + 'timeMs' + "'" + ':' +
+                            response[i].timeMs +
+                        '});"><ion-thumbnail><img src="' +
                         response[i].imgUrl +
                         '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
                         response[i].name +
@@ -499,13 +567,10 @@ function onSearchTrack(name) {
 function onSelectTrack(track) {
     $.ajax({
         type: 'POST',
-        url: api + 'user/track',
+        url: api + 'user/track/' + window.sessionStorage.getItem('userId'),
         dataType: 'text',
         contentType: 'application/json; charset=utf-8',
-        data: JSON.stringify({
-            id: window.sessionStorage.getItem('userId'),
-            trackId: track
-        }),
+        data: JSON.stringify(track),
         statusCode: {
             403: function(xhr) {
                 console.log(xhr['responseText']);

@@ -2,6 +2,7 @@ package com.rgq.votedoreact.controller;
 
 import com.rgq.votedoreact.dto.*;
 import com.rgq.votedoreact.service.SessionEventService;
+import com.rgq.votedoreact.sse.EventType;
 import com.rgq.votedoreact.sse.SessionSSE;
 import com.rgq.votedoreact.sse.UserSSE;
 import com.rgq.votedoreact.model.User;
@@ -87,11 +88,11 @@ public class UserController {
             });
     }
 
-    @PostMapping("/track")
-    public Mono<ResponseEntity<String>> setTrack(@RequestBody CreateTrackDTO createTrackDTO) {
-        return service.getById(createTrackDTO.getId()).map(user -> {
+    @PostMapping("/track/{id}")
+    public Mono<ResponseEntity<String>> setTrack(@PathVariable String id, @RequestBody TrackDTO trackDTO) {
+        return service.getById(id).map(user -> {
             if(user.getTrackId() == null) {
-                user.setTrackId(createTrackDTO.getTrackId());
+                user.setTrackId(trackDTO.getId());
             } else {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(user.getTrackId());
             }
@@ -99,10 +100,9 @@ public class UserController {
                 sessionEventService
                     .getPublishers()
                     .get(saved.getSessionId())
-                    // wip...
-                    .publishEvent(new SessionSSE(createTrackDTO.getId()));
+                    .publishEvent(new SessionSSE(EventType.TRACKCREATE, trackDTO));
             });
-            return ResponseEntity.ok(createTrackDTO.getTrackId() + " saved");
+            return ResponseEntity.ok(trackDTO.getId() + " saved");
         });
     }
 

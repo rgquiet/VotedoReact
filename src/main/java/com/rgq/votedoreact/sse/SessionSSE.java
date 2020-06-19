@@ -8,6 +8,6 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 public class SessionSSE {
-    private String id;
-    // wip...
+    private EventType type;
+    private Object dto;
 }

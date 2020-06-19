@@ -45,8 +45,9 @@ public class SpotifyController {
             // Check if user already exists in db
             if(exist) {
                 return userService.getById(user.getId()).flatMap(response -> {
-                    // Keep existing fields 'sessionId', 'friends'
+                    // Keep existing fields 'sessionId', 'trackId' and 'friends'
                     user.setSessionId(response.getSessionId());
+                    user.setTrackId(response.getTrackId());
                     user.setFriends(response.getFriends());
                     return userService.save(user);
                 });

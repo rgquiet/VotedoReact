@@ -3,10 +3,12 @@ package com.rgq.votedoreact.controller;
 import com.rgq.votedoreact.config.SessionEventPublisher;
 import com.rgq.votedoreact.dto.CreateSessionDTO;
 import com.rgq.votedoreact.dto.SessionDTO;
+import com.rgq.votedoreact.dto.TrackDTO;
 import com.rgq.votedoreact.dto.UserDTO;
 import com.rgq.votedoreact.model.Session;
 import com.rgq.votedoreact.service.SessionEventService;
 import com.rgq.votedoreact.service.SessionService;
+import com.rgq.votedoreact.service.SpotifyService;
 import com.rgq.votedoreact.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -17,6 +19,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/session")
@@ -24,15 +27,18 @@ public class SessionController {
     private SessionService service;
     private SessionEventService eventService;
     private UserService userService;
+    private SpotifyService spotifyService;
 
     public SessionController(
         SessionService service,
         SessionEventService eventService,
-        UserService userService
+        UserService userService,
+        SpotifyService spotifyService
     ) {
         this.service = service;
         this.eventService = eventService;
         this.userService = userService;
+        this.spotifyService = spotifyService;
     }
 
     @GetMapping(value = "/sub/{name}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -98,7 +104,6 @@ public class SessionController {
                         user,
                         new ArrayList<>()
                     )).map(session -> {
-                        // wip: Not persistent (server restart!)
                         eventService.getPublishers().put(session.getId(), new SessionEventPublisher());
                         user.setSessionId(session.getId());
                         userService.save(user).subscribe();
@@ -122,6 +127,29 @@ public class SessionController {
                     return ResponseEntity.ok(response);
                 }
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+            });
+    }
+
+    @GetMapping("/getTracks/{id}")
+    public Mono<List<TrackDTO>> getTracksById(@PathVariable String id) {
+        return service.getById(id)
+            .map(session -> {
+                List<TrackDTO> tracks = new ArrayList<>();
+                String ownerTrackId = session.getOwner().getTrackId();
+                /* wip: Change model.Session
+                    - owner field just holds userId
+                    - members list contains user object of owner
+                    - sessionDTOMapper must be changed (owner.getImgUrl(), getUsername())
+                */
+                if(ownerTrackId != null) {
+                    tracks.add(spotifyService.getTrackById(ownerTrackId));
+                }
+                session.getMembers().forEach(user -> {
+                    if(user.getTrackId() != null) {
+                        tracks.add(spotifyService.getTrackById(user.getTrackId()));
+                    }
+                });
+                return tracks;
             });
     }
 }

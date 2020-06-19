@@ -3,24 +3,33 @@ db.dropDatabase();
 
 db.users.insertMany([
     {
-        _id: "testuser1",
-        sessionId: "testsession1",
-        username: "Pierce Hawthrone",
-        email: "pierc@test.com",
-        imgUrl: "https://vignette.wikia.nocookie.net/community-sitcom/images/6/67/Evil_Pierce.jpg/revision/latest?cb=20131121155926"
+        _id: "vqyrcsnd84efzir5ukl2u5jy7",
+        sessionId: "5eec9863b6c08928fd7435a7",
+        username: "RobWob",
+        email: "funadresse@gmx.ch",
+        imgUrl: "https://i.scdn.co/image/ab6775700000ee8558dec5dc13a2ca415586179f",
+        friends: [],
+        _class: "com.rgq.votedoreact.model.User"
     },{
-        _id: "testuser2",
-        sessionId: "testsession1",
-        username: "Jeff Winger",
-        email: "jeff@test.com",
-        imgUrl: "https://pbs.twimg.com/profile_images/898704711725064194/22M0y-WR_400x400.jpg"
+        _id: "rg_quiet",
+        sessionId: "5eec9863b6c08928fd7435a7",
+        trackId: "5UWwZ5lm5PKu6eKsHAGxOk",
+        username: "rg_quiet",
+        email: "robinguedel@gmail.com",
+        imgUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Nicolas_Cage_Deauville_2013.jpg/330px-Nicolas_Cage_Deauville_2013.jpg",
+        friends: [],
+        _class: "com.rgq.votedoreact.model.User"
     }
 ]);
 
 db.sessions.insertOne({
-    _id: "testsession1",
-    name: "This is a test",
+    _id: ObjectId("5eec9863b6c08928fd7435a7"),
+    name: "Test",
     open: true,
-    owner: {$ref: "users", $id: "testuser1"},
-    members: [{$ref: "users", $id: "testuser2"}]
+    owner: {$ref: "users", $id: "vqyrcsnd84efzir5ukl2u5jy7"},
+    members: [{$ref: "users", $id: "rg_quiet"}],
+    _class: "com.rgq.votedoreact.model.Session"
 });
+
+db.createCollection("vqyrcsnd84efzir5ukl2u5jy7", { capped: true, size: 4, max: 10 });
+db.createCollection("rg_quiet", { capped: true, size: 4, max: 10 });
