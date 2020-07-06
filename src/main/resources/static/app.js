@@ -40,14 +40,10 @@ function checkAccessToken() {
             success: function(response) {
                 window.sessionStorage.setItem('userId', response['id']);
                 showMe(window.sessionStorage.getItem('displayPage'));
-                $('#userName').text(response['username']);
                 $('#logInOut').text('Logout');
-                /*
-                if(response['imgUrl']) {
-                    $('#userImg').attr('src', response['imgUrl']);
-                    $('#userImg').parent().removeClass('hidden');
-                }
-                */
+                $('#userName').text(response['username']);
+                $('#userImg').attr('src', response['imgUrl']);
+                $('#userImg').parent().removeClass('hidden');
                 userSse = new EventSource(api + 'user/sub/' + response['id']);
                 userSse.onmessage = function(event) { onUserEvent(event); }
                 if(response['sessionId']) {

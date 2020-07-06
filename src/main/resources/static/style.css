@@ -1,8 +1,22 @@
+#votedo {
+    padding-left: 0px;
+    padding-right: 48px;
+}
+
+#me {
+    margin-left: 5px;
+    padding: 3px;
+    height: 50px;
+    width: 50px;
+}
+
 .hidden {
     display: none;
 }
 
-.modal-wrapper {
-    height: 70% !important;
-    width: 60% !important;
+@media only screen and (min-width: 768px) {
+    .modal-wrapper {
+        height: 70% !important;
+        width: 60% !important;
+    }
 }
