@@ -25,7 +25,7 @@
         <ion-menu side="start" content-id="main-content">
             <ion-header>
                 <ion-toolbar>
-                    <ion-avatar id="me" class="hidden" slot="start">
+                    <ion-avatar id="me" class="ion-hide" slot="start">
                         <img id="userImg"/>
                     </ion-avatar>
                     <ion-title id="userName" style="padding: 0px 10px;">Guest</ion-title>
@@ -55,7 +55,7 @@
             <ion-content id="page-home" class="ion-padding display">
                 <ion-grid>
                     <ion-row>
-                        <ion-col size-sm="8" offset-sm="2">
+                        <ion-col size-md="8" offset-md="2">
                             <ion-searchbar oninput="onPublicSession($(this).val());"></ion-searchbar>
                             <ion-list id="publicSessionList"></ion-list>
                         </ion-col>
@@ -63,11 +63,11 @@
                 </ion-grid>
             </ion-content>
 
-            <ion-content id="page-create" class="ion-padding hidden">
+            <ion-content id="page-create" class="ion-padding ion-hide">
                 <form>
                     <ion-grid>
                         <ion-row>
-                            <ion-col size-sm="6" offset-sm="3">
+                            <ion-col size-md="6" offset-md="3">
                                 <ion-button id="sessionCreate" color="primary" expand="block"
                                             disabled="disabled" onclick="onCreateSession();">Create</ion-button>
 
@@ -76,7 +76,7 @@
                                     <ion-input id="sessionName" type="text"></ion-input>
                                 </ion-item>
 
-                                <ion-item id="sessionNameWarning" class="hidden" lines="none">
+                                <ion-item id="sessionNameWarning" class="ion-hide" lines="none">
                                     <ion-label color="danger">
                                         <small>Title must be between 3 and 25 characters long</small>
                                     </ion-label>
@@ -94,8 +94,8 @@
                 </form>
             </ion-content>
 
-            <ion-content id="page-friends" class="ion-padding hidden">
-                <div style="position: absolute; left: 90%; top: 5%; z-index: 1;">
+            <ion-content id="page-friends" class="ion-padding ion-hide">
+                <div class="ion-hide-md-down" style="position: absolute; left: 90%; top: 5%; z-index: 1;">
                     <ion-fab-button onclick="createFriendModal();">
                         <ion-icon name="add"></ion-icon>
                     </ion-fab-button>
@@ -103,17 +103,17 @@
 
                 <ion-grid>
                     <ion-row>
-                        <ion-col size-sm="8" offset-sm="2">
+                        <ion-col size-md="8" offset-md="2">
                             <ion-list id="myFriendsList"></ion-list>
                         </ion-col>
                     </ion-row>
                 </ion-grid>
             </ion-content>
 
-            <ion-content id="page-session" class="ion-padding hidden">
+            <ion-content id="page-session" class="ion-padding ion-hide">
                 <ion-title>wip: Session</ion-title>
 
-                <div style="position: absolute; left: 90%; top: 5%; z-index: 1;">
+                <div class="ion-hide-md-down" style="position: absolute; left: 90%; top: 5%; z-index: 1;">
                     <ion-fab-button onclick="createTrackModal();">
                         <ion-icon name="add"></ion-icon>
                     </ion-fab-button>
@@ -121,7 +121,7 @@
 
                 <ion-grid>
                     <ion-row>
-                        <ion-col size-sm="8" offset-sm="2">
+                        <ion-col size-md="8" offset-md="2">
                             <ion-list id="sessionTrackList"></ion-list>
                         </ion-col>
                     </ion-row>

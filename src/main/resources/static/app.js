@@ -11,7 +11,7 @@ $(window).on('beforeunload', function() {
 });
 
 $(function() {
-    if(window.sessionStorage.getItem('displayPage')) {
+    if(sessionStorage.getItem('displayPage')) {
         checkAccessToken();
     } else {
         onPublicSession('');
@@ -38,12 +38,12 @@ function checkAccessToken() {
                 }
             },
             success: function(response) {
-                window.sessionStorage.setItem('userId', response['id']);
-                showMe(window.sessionStorage.getItem('displayPage'));
+                sessionStorage.setItem('userId', response['id']);
+                showMe(sessionStorage.getItem('displayPage'));
                 $('#logInOut').text('Logout');
                 $('#userName').text(response['username']);
                 $('#userImg').attr('src', response['imgUrl']);
-                $('#userImg').parent().removeClass('hidden');
+                $('#userImg').parent().removeClass('ion-hide');
                 userSse = new EventSource(api + 'user/sub/' + response['id']);
                 userSse.onmessage = function(event) { onUserEvent(event); }
                 if(response['sessionId']) {
@@ -52,16 +52,16 @@ function checkAccessToken() {
             }
         });
     } else {
-        window.sessionStorage.clear();
+        sessionStorage.clear();
         onPublicSession('');
     }
 }
 
 function implicitGrantFlow(pageName) {
-    if(window.sessionStorage.getItem('userId')) {
+    if(sessionStorage.getItem('userId')) {
         showMe(pageName);
     } else {
-        window.sessionStorage.setItem('displayPage', pageName);
+        sessionStorage.setItem('displayPage', pageName);
         $.ajax({
             type: 'GET',
             url: api + 'spotify/auth',
@@ -90,11 +90,11 @@ function showMe(pageName) {
     // Switch display to hidden and show required page
     $('.display').each(function() {
         $(this).removeClass('display');
-        $(this).addClass('hidden');
+        $(this).addClass('ion-hide');
     });
     $('#page-' + pageName).addClass('display');
-    $('#page-' + pageName).removeClass('hidden');
-    window.sessionStorage.setItem('displayPage', pageName);
+    $('#page-' + pageName).removeClass('ion-hide');
+    sessionStorage.setItem('displayPage', pageName);
 }
 
 function onUserEvent(event) {
@@ -113,7 +113,7 @@ function onUserEvent(event) {
 }
 
 function closeUserEvent(sessionId) {
-    const id = window.sessionStorage.getItem('userId');
+    const id = sessionStorage.getItem('userId');
     $.ajax({
         type: 'POST',
         url: api + 'user/closeEvent',
@@ -172,7 +172,7 @@ function onPublicSession(name) {
 }
 
 function onJoinSession(sessionId) {
-    const id = window.sessionStorage.getItem('userId');
+    const id = sessionStorage.getItem('userId');
     if(id) {
         $.ajax({
             type: 'POST',
@@ -203,10 +203,10 @@ function onJoinSession(sessionId) {
 /* Page: 'create' */
 $('#sessionName').on('input', function() {
     if($(this).val().length > 2 && $(this).val().length < 26) {
-        $('#sessionNameWarning').addClass('hidden');
+        $('#sessionNameWarning').addClass('ion-hide');
         $('#sessionCreate').prop('disabled', false);
     } else {
-        $('#sessionNameWarning').removeClass('hidden');
+        $('#sessionNameWarning').removeClass('ion-hide');
         $('#sessionCreate').prop('disabled', true);
     }
 });
@@ -259,7 +259,7 @@ function onCreateSession() {
         dataType: 'json',
         contentType: 'application/json; charset=utf-8',
         data: JSON.stringify({
-            userId: window.sessionStorage.getItem('userId'),
+            userId: sessionStorage.getItem('userId'),
             name: $('#sessionName').val(),
             invitations: invitations
         }),
@@ -381,7 +381,7 @@ function onInviteFriend(friend) {
         dataType: 'text',
         contentType: 'application/json; charset=utf-8',
         data: JSON.stringify({
-            id: window.sessionStorage.getItem('userId'),
+            id: sessionStorage.getItem('userId'),
             friendId: friend
         }),
         statusCode: {
@@ -447,26 +447,40 @@ function onSessionEvent(event) {
 
 function addToSessionTrackList(track) {
     let time = msToTime(track.timeMs);
-    $('#sessionTrackList').append(
+    // wip: Don't allow same track multiple times in a session
+    let html =
         '<ion-item><ion-thumbnail><img src="' +
         track.imgUrl +
         '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
         track.name +
         '</h2><p>' +
         track.artist +
-        '</p></ion-label><ion-label class="ion-text-end ion-margin-end"><p>' +
+        '</p></ion-label><ion-label class="ion-hide-md-down ion-text-center"><p>' +
         time +
-        '</p></ion-label><ion-button id="' +
-        // wip: Don't allow same track multiple times in a session
+        '</p></ion-label><ion-label class="ion-text-end"><ion-icon name="hand-left-outline"></ion-icon>' +
+        track.votes +
+        '<ion-button id="' +
         track.id +
-        '" fill="outline" slot="end" onclick="vote($(this));">' +
-        'Vote</ion-button></ion-item>'
-    );
+        '" fill="outline" style="width: 73px; margin-left: 7px;"';
+    if(track.userId === sessionStorage.getItem('userId')) {
+        $('#sessionTrackList').append(
+            html + 'onclick="revokeMyTrack($(this));">Revoke</ion-button></ion-label></ion-item>'
+        );
+    } else {
+        $('#sessionTrackList').append(
+            html + 'onclick="vote($(this));">Vote</ion-button></ion-label></ion-item>'
+        );
+    }
 }
 
 function onTrackRemove(track) {
     // wip...
     console.log(track);
+}
+
+function revokeMyTrack(tag) {
+    // wip...
+    console.log(tag.attr('id'));
 }
 
 function onNewVote(vote) {
@@ -563,7 +577,7 @@ function onSearchTrack(name) {
 function onSelectTrack(track) {
     $.ajax({
         type: 'POST',
-        url: api + 'user/track/' + window.sessionStorage.getItem('userId'),
+        url: api + 'user/track/' + sessionStorage.getItem('userId'),
         dataType: 'text',
         contentType: 'application/json; charset=utf-8',
         data: JSON.stringify(track),

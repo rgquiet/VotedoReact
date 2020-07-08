@@ -1,12 +1,17 @@
 package com.rgq.votedoreact.service;
 
 import com.rgq.votedoreact.dto.SessionDTO;
+import com.rgq.votedoreact.dto.SessionTrackDTO;
+import com.rgq.votedoreact.dto.TrackDTO;
+import com.rgq.votedoreact.model.Vote;
 import com.rgq.votedoreact.sse.UserSSE;
 import com.rgq.votedoreact.model.Session;
 import com.rgq.votedoreact.repo.SessionRepo;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @Service
 public class SessionService {
@@ -49,6 +54,25 @@ public class SessionService {
             session.getOwner().getUsername(),
             session.getOwner().getImgUrl(),
             session.getMembers().size() + 1
+        );
+    }
+
+    public SessionTrackDTO sessionTrackDTOMapper(TrackDTO track, List<Vote> votes, String userId) {
+        Integer trackVote = 0;
+        // Counts votes of the song in the session
+        for(int i = 0; i < votes.size(); i++) {
+            if(votes.get(i).getTrackId().equals(track.getId())) {
+                trackVote++;
+            }
+        }
+        return new SessionTrackDTO(
+            track.getId(),
+            userId,
+            track.getName(),
+            track.getArtist(),
+            track.getImgUrl(),
+            track.getTimeMs(),
+            trackVote
         );
     }
 }

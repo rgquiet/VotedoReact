@@ -96,11 +96,20 @@ public class UserController {
             } else {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(user.getTrackId());
             }
+            SessionTrackDTO sessionTrack = new SessionTrackDTO(
+                trackDTO.getId(),
+                user.getId(),
+                trackDTO.getName(),
+                trackDTO.getArtist(),
+                trackDTO.getImgUrl(),
+                trackDTO.getTimeMs(),
+                0
+            );
             service.save(user).subscribe(saved -> {
                 sessionEventService
                     .getPublishers()
                     .get(saved.getSessionId())
-                    .publishEvent(new SessionSSE(EventType.TRACKCREATE, trackDTO));
+                    .publishEvent(new SessionSSE(EventType.TRACKCREATE, sessionTrack));
             });
             return ResponseEntity.ok(trackDTO.getId() + " saved");
         });

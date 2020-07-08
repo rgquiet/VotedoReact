@@ -9,6 +9,7 @@ db.users.insertMany([
         email: "funadresse@gmx.ch",
         imgUrl: "https://i.scdn.co/image/ab6775700000ee8558dec5dc13a2ca415586179f",
         friends: [],
+        votes: 0,
         _class: "com.rgq.votedoreact.model.User"
     },{
         _id: "rg_quiet",
@@ -18,6 +19,7 @@ db.users.insertMany([
         email: "robinguedel@gmail.com",
         imgUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Nicolas_Cage_Deauville_2013.jpg/330px-Nicolas_Cage_Deauville_2013.jpg",
         friends: [],
+        votes: 0,
         _class: "com.rgq.votedoreact.model.User"
     }
 ]);
@@ -28,6 +30,7 @@ db.sessions.insertOne({
     open: true,
     owner: {$ref: "users", $id: "vqyrcsnd84efzir5ukl2u5jy7"},
     members: [{$ref: "users", $id: "rg_quiet"}],
+    votes: [],
     _class: "com.rgq.votedoreact.model.Session"
 });
 

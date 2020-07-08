@@ -23,4 +23,5 @@ public class User {
     private String accessToken;
     private Date expiresAt;
     private List<String> friends;
+    private Integer votes;
 }

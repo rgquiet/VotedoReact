@@ -21,4 +21,5 @@ public class Session {
     private User owner;
     @DBRef
     private List<User> members;
+    private List<Vote> votes;
 }

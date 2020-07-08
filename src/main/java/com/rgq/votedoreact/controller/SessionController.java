@@ -1,10 +1,7 @@
 package com.rgq.votedoreact.controller;
 
 import com.rgq.votedoreact.config.SessionEventPublisher;
-import com.rgq.votedoreact.dto.CreateSessionDTO;
-import com.rgq.votedoreact.dto.SessionDTO;
-import com.rgq.votedoreact.dto.TrackDTO;
-import com.rgq.votedoreact.dto.UserDTO;
+import com.rgq.votedoreact.dto.*;
 import com.rgq.votedoreact.model.Session;
 import com.rgq.votedoreact.service.SessionEventService;
 import com.rgq.votedoreact.service.SessionService;
@@ -102,6 +99,7 @@ public class SessionController {
                         createSessionDTO.getName(),
                         open,
                         user,
+                        new ArrayList<>(),
                         new ArrayList<>()
                     )).map(session -> {
                         eventService.getPublishers().put(session.getId(), new SessionEventPublisher());
@@ -131,10 +129,10 @@ public class SessionController {
     }
 
     @GetMapping("/getTracks/{id}")
-    public Mono<List<TrackDTO>> getTracksById(@PathVariable String id) {
+    public Mono<List<SessionTrackDTO>> getTracksById(@PathVariable String id) {
         return service.getById(id)
             .map(session -> {
-                List<TrackDTO> tracks = new ArrayList<>();
+                List<SessionTrackDTO> tracks = new ArrayList<>();
                 String ownerTrackId = session.getOwner().getTrackId();
                 /* wip: Change model.Session
                     - owner field just holds userId
@@ -142,11 +140,17 @@ public class SessionController {
                     - sessionDTOMapper must be changed (owner.getImgUrl(), getUsername())
                 */
                 if(ownerTrackId != null) {
-                    tracks.add(spotifyService.getTrackById(ownerTrackId));
+                    TrackDTO dto = spotifyService.getTrackById(ownerTrackId);
+                    tracks.add(
+                        service.sessionTrackDTOMapper(dto, session.getVotes(), session.getOwner().getId())
+                    );
                 }
                 session.getMembers().forEach(user -> {
                     if(user.getTrackId() != null) {
-                        tracks.add(spotifyService.getTrackById(user.getTrackId()));
+                        TrackDTO dto = spotifyService.getTrackById(user.getTrackId());
+                        tracks.add(
+                            service.sessionTrackDTOMapper(dto, session.getVotes(), user.getId())
+                        );
                     }
                 });
                 return tracks;

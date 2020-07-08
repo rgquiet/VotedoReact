@@ -81,7 +81,8 @@ public class SpotifyService {
                     cagesUrl[new Random().nextInt(cagesUrl.length - 1)],
                     dto.getAccessToken(),
                     new Date(dto.getTimestamp()),
-                    new ArrayList<>()
+                    new ArrayList<>(),
+                    0
                 );
                 if(userProfile.getImages().length > 0) {
                     user.setImgUrl(userProfile.getImages()[0].getUrl());
@@ -143,7 +144,7 @@ public class SpotifyService {
         return null;
     }
 
-    public TrackDTO trackDTOMapper(Track track) {
+    private TrackDTO trackDTOMapper(Track track) {
         String artists = new String();
         for(int j = 0; j < track.getArtists().length; j++) {
             artists = artists + track.getArtists()[j].getName() + ", ";
