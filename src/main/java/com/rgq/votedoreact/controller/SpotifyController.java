@@ -60,7 +60,20 @@ public class SpotifyController {
         }).map(savedUser -> ResponseEntity.ok(userService.userDTOMapper(savedUser)));
     }
 
-    @GetMapping("/findTrack/{name}")
+    @GetMapping("/devices/{userId}")
+    public Mono<ResponseEntity<List<String>>> getDevicesByUser(@PathVariable String userId) {
+        return userService.getById(userId)
+            .map(user -> service.getAvailableDevices(user.getAccessToken()))
+            .map(response -> {
+                if(response.get(0).equals("No devices available")) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+                } else {
+                    return ResponseEntity.ok(response);
+                }
+            });
+    }
+
+    @GetMapping("/findTracks/{name}")
     public ResponseEntity<List<TrackDTO>> getTracksByName(@PathVariable String name) {
         return ResponseEntity.ok(service.searchSpotifyTrack(name));
     }

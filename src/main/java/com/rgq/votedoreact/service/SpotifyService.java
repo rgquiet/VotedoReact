@@ -6,9 +6,11 @@ import com.rgq.votedoreact.dto.TrackDTO;
 import com.wrapper.spotify.SpotifyApi;
 import com.wrapper.spotify.exceptions.SpotifyWebApiException;
 import com.wrapper.spotify.model_objects.credentials.ClientCredentials;
+import com.wrapper.spotify.model_objects.miscellaneous.Device;
 import com.wrapper.spotify.model_objects.specification.Paging;
 import com.wrapper.spotify.model_objects.specification.Track;
 import com.wrapper.spotify.model_objects.specification.User;
+import com.wrapper.spotify.requests.data.player.GetUsersAvailableDevicesRequest;
 import com.wrapper.spotify.requests.data.search.simplified.SearchTracksRequest;
 import com.wrapper.spotify.requests.data.tracks.GetTrackRequest;
 import com.wrapper.spotify.requests.data.users_profile.GetCurrentUsersProfileRequest;
@@ -88,6 +90,34 @@ public class SpotifyService {
                     user.setImgUrl(userProfile.getImages()[0].getUrl());
                 }
                 return user;
+            }).get();
+        } catch(InterruptedException e) {
+            logger.error("{}", e);
+        } catch(ExecutionException e) {
+            logger.error("{}", e);
+        } catch(CompletionException e) {
+            logger.error("{}", e);
+        } catch(CancellationException e) {
+            logger.info("{}", "Async operation cancelled.");
+        }
+        return null;
+    }
+
+    public List<String> getAvailableDevices(String accessToken) {
+        SpotifyApi api = new SpotifyApi.Builder().setAccessToken(accessToken).build();
+        GetUsersAvailableDevicesRequest devicesRequest = api.getUsersAvailableDevices().build();
+        try {
+            final CompletableFuture<Device[]> future = devicesRequest.executeAsync();
+            return future.thenApply(devices -> {
+                List<String> deviceNames = new ArrayList<>();
+                if(devices.length == 0) {
+                    deviceNames.add("No devices available");
+                } else {
+                    for(int i = 0; i < devices.length; i++) {
+                        deviceNames.add(devices[i].getName());
+                    }
+                }
+                return deviceNames;
             }).get();
         } catch(InterruptedException e) {
             logger.error("{}", e);

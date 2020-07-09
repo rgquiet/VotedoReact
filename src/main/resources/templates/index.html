@@ -16,6 +16,8 @@
         window.menuController = menuController;
         import { modalController } from "https://cdn.jsdelivr.net/npm/@ionic/core@next/dist/ionic/index.esm.js";
         window.modalController = modalController;
+        import { pickerController } from 'https://cdn.jsdelivr.net/npm/@ionic/core@next/dist/ionic/index.esm.js';
+        window.pickerController = pickerController;
     </script>
     <!-- custom style -->
     <link rel="stylesheet" href="style.css"/>
@@ -72,8 +74,13 @@
                                             disabled="disabled" onclick="onCreateSession();">Create</ion-button>
 
                                 <ion-item>
+                                    <ion-label position="floating">Audio Device</ion-label>
+                                    <ion-input id="sessionDevice" type="text" onclick="onAudioDevice();"/>
+                                </ion-item>
+
+                                <ion-item>
                                     <ion-label position="floating">Session Name</ion-label>
-                                    <ion-input id="sessionName" type="text"></ion-input>
+                                    <ion-input id="sessionName" type="text"/>
                                 </ion-item>
 
                                 <ion-item id="sessionNameWarning" class="ion-hide" lines="none">
@@ -83,8 +90,8 @@
                                 </ion-item>
 
                                 <ion-item class="center" lines="none">
-                                    <ion-checkbox id="sessionOpen" class="ion-margin-end"></ion-checkbox>
                                     <ion-label>Private</ion-label>
+                                    <ion-toggle id="sessionOpen" slot="start"></ion-toggle>
                                 </ion-item>
 
                                 <ion-list id="sessionFriendsList"></ion-list>
@@ -111,8 +118,6 @@
             </ion-content>
 
             <ion-content id="page-session" class="ion-padding ion-hide">
-                <ion-title>wip: Session</ion-title>
-
                 <div class="ion-hide-md-down" style="position: absolute; left: 90%; top: 5%; z-index: 1;">
                     <ion-fab-button onclick="createTrackModal();">
                         <ion-icon name="add"></ion-icon>
@@ -128,7 +133,7 @@
                 </ion-grid>
             </ion-content>
 
-            <ion-tab-bar slot="bottom">
+            <ion-tab-bar id="bar-main" class="toggle" slot="bottom">
                 <ion-tab-button name="home" onclick="showMe($(this).attr('name'));">
                     <ion-label>Home</ion-label>
                     <ion-icon name="home-outline"></ion-icon>
@@ -142,6 +147,18 @@
                 <ion-tab-button name="friends" onclick="implicitGrantFlow($(this).attr('name'));">
                     <ion-label>Friends</ion-label>
                     <ion-icon name="person-outline"></ion-icon>
+                </ion-tab-button>
+
+                <ion-tab-button name="toggleUp" class="ion-hide" onclick="toggleFooter();">
+                    <ion-icon name="caret-up-outline"></ion-icon>
+                </ion-tab-button>
+            </ion-tab-bar>
+
+            <ion-tab-bar id="bar-session" class="ion-hide" slot="bottom">
+                <!-- wip: Add session infos (Current track, owner, name, etc.) -->
+
+                <ion-tab-button name="toggleDown" onclick="toggleFooter();">
+                    <ion-icon name="caret-down-outline"></ion-icon>
                 </ion-tab-button>
             </ion-tab-bar>
         </ion-tabs>

@@ -81,6 +81,22 @@ function logInOut(btn) {
     }
 }
 
+function toggleFooter() {
+    if($('.toggle').attr('id') === 'bar-main') {
+        $('#bar-main').removeClass('toggle');
+        $('#bar-main').addClass('ion-hide');
+        $('#bar-session').removeClass('ion-hide');
+        $('#bar-session').addClass('toggle');
+        // wip...
+        showMe('session');
+    } else {
+        $('#bar-session').removeClass('toggle');
+        $('#bar-session').addClass('ion-hide');
+        $('#bar-main').removeClass('ion-hide');
+        $('#bar-main').addClass('toggle');
+    }
+}
+
 function showMe(pageName) {
     if(pageName === 'home') {
         onPublicSession('');
@@ -147,7 +163,6 @@ function onPublicSession(name) {
     $.ajax({
         type: 'GET',
         url: api + 'session/findPublic/' + name,
-        dataType: 'json',
         contentType: 'application/json; charset=utf-8',
         success: function(response) {
             $('#publicSessionList').empty();
@@ -201,6 +216,54 @@ function onJoinSession(sessionId) {
 }
 
 /* Page: 'create' */
+async function openPicker(columnOptions) {
+    const picker = await pickerController.create({
+        columns: this.getColumnsAndOptions(columnOptions),
+        buttons: [{
+            text: 'Cancel',
+            role: 'cancel'
+        }, {
+            text: 'Confirm',
+            handler: (value) => {
+                $('#sessionDevice').val(value['col-0'].text);
+            }
+        }]
+    });
+    await picker.present();
+}
+
+function getColumnsAndOptions(columnOptions) {
+    let options = [];
+    for(let i = 0; i < columnOptions.length; i++) {
+        options.push({
+            text: 1 + i + '. ' + columnOptions[i],
+            value: i
+        })
+    }
+    return columns = [{
+        name: 'col-0',
+        options: options
+    }];
+}
+
+function onAudioDevice() {
+    $.ajax({
+        type: 'GET',
+        url: api + 'spotify/devices/' + sessionStorage.getItem('userId'),
+        contentType: 'application/json; charset=utf-8',
+        statusCode: {
+            403: function(xhr) {
+                console.log(xhr['responseText']);
+                // wip...
+            }
+        },
+        success: function(response) {
+            openPicker(response);
+        }
+    });
+}
+
+// wip: Add warning if no audio device is selected
 $('#sessionName').on('input', function() {
     if($(this).val().length > 2 && $(this).val().length < 26) {
         $('#sessionNameWarning').addClass('ion-hide');
@@ -212,7 +275,7 @@ $('#sessionName').on('input', function() {
 });
 
 $('#sessionOpen').on('click', function() {
-    if($(this).attr('class').search('checkbox-checked') === -1) {
+    if($(this).attr('class').search('toggle-checked') === -1) {
         $.ajax({
             type: 'GET',
             url: api + 'user/friends/' + sessionStorage.getItem('userId'),
@@ -261,6 +324,7 @@ function onCreateSession() {
         data: JSON.stringify({
             userId: sessionStorage.getItem('userId'),
             name: $('#sessionName').val(),
+            deviceName: $('sessionDevice').val(),
             invitations: invitations
         }),
         statusCode: {
@@ -323,7 +387,6 @@ function onSearchFriend(name) {
     $.ajax({
         type: 'GET',
         url: api + 'user/findUser/' + name,
-        dataType: 'json',
         contentType: 'application/json; charset=utf-8',
         success: function(response) {
             $('#userList').empty();
@@ -414,13 +477,13 @@ function alreadyInSession(id) {
 }
 
 function showSessionContent(session) {
-    // wip: Add session infos (Current track, owner, name, etc.)
+    toggleFooter();
+    $('[name="toggleUp"]').removeClass('ion-hide');
     sessionSse = new EventSource(api + 'session/sub/' + session['id']);
     sessionSse.onmessage = function(event) { onSessionEvent(event); }
     $.ajax({
         type: 'GET',
         url: api + 'session/getTracks/' + session['id'],
-        dataType: 'json',
         contentType: 'application/json; charset=utf-8',
         success: function(response) {
             $.each(response, function(i) {
@@ -539,12 +602,11 @@ function onSearchTrack(name) {
     if(name !== '') {
         $.ajax({
             type: 'GET',
-            url: api + 'spotify/findTrack/' + name,
-            dataType: 'json',
+            url: api + 'spotify/findTracks/' + name,
             contentType: 'application/json; charset=utf-8',
             success: function(response) {
                 $('#trackList').empty();
-                $.each(response, function(i) {
+                    $.each(response, function(i) {
                     let time = msToTime(response[i].timeMs);
                     $('#trackList').append(
                         '<ion-item button onclick="onSelectTrack({' +

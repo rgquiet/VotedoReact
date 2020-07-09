@@ -10,5 +10,6 @@ import lombok.Setter;
 public class CreateSessionDTO {
     private String userId;
     private String name;
+    private String deviceName;
     private String[] invitations;
 }

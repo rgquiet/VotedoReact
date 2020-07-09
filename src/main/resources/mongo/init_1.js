@@ -1,3 +1,5 @@
+// Test data: Users already in a test session
+
 db = db.getSiblingDB("votedo");
 db.dropDatabase();
 
