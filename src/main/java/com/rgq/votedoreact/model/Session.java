@@ -15,6 +15,7 @@ import java.util.List;
 public class Session {
     @Id
     private String id;
+    private String deviceId;
     private String name;
     private Boolean open;
     @DBRef

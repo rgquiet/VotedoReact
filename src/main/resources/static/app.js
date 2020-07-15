@@ -87,7 +87,6 @@ function toggleFooter() {
         $('#bar-main').addClass('ion-hide');
         $('#bar-session').removeClass('ion-hide');
         $('#bar-session').addClass('toggle');
-        // wip...
         showMe('session');
     } else {
         $('#bar-session').removeClass('toggle');
@@ -102,6 +101,11 @@ function showMe(pageName) {
         onPublicSession('');
     } else if(pageName === 'friends') {
         onMyFriends();
+    }
+    if(pageName === 'create') {
+        createEventOn();
+    } else {
+        createEventOff();
     }
     // Switch display to hidden and show required page
     $('.display').each(function() {
@@ -154,6 +158,15 @@ function rejectInvitation(tag) {
     tag.parent().parent().remove();
 }
 
+async function showAlert(header, message) {
+    const alert = await alertController.create({
+        header: header,
+        message: message,
+        buttons: ['OK']
+    });
+    await alert.present();
+}
+
 /* Page: 'home' */
 function onPublicSession(name) {
     // Empty string is not allowed
@@ -202,7 +215,7 @@ function onJoinSession(sessionId) {
                 403: function(xhr) {
                     console.log(xhr['responseText']);
                     // wip...
-                    alert('You are already in a session');
+                    showAlert('Attention', 'You are already in a session');
                 }
             },
             success: function(response) {
@@ -211,70 +224,48 @@ function onJoinSession(sessionId) {
             }
         });
     } else {
-        alert('Please sign in to join a session');
+        showAlert('Attention', 'Please sign in to join a session');
     }
 }
 
 /* Page: 'create' */
-async function openPicker(columnOptions) {
-    const picker = await pickerController.create({
-        columns: this.getColumnsAndOptions(columnOptions),
-        buttons: [{
-            text: 'Cancel',
-            role: 'cancel'
-        }, {
-            text: 'Confirm',
-            handler: (value) => {
-                $('#sessionDevice').val(value['col-0'].text);
-            }
-        }]
-    });
-    await picker.present();
+function createEventOn() {
+    $('#sessionDevice').on('ionChange', checkSessionCreate);
+    $('#sessionName').on('input', onSessionName);
+    $('#sessionOpen').on('click', onSessionOpen);
 }
 
-function getColumnsAndOptions(columnOptions) {
-    let options = [];
-    for(let i = 0; i < columnOptions.length; i++) {
-        options.push({
-            text: 1 + i + '. ' + columnOptions[i],
-            value: i
-        })
-    }
-    return columns = [{
-        name: 'col-0',
-        options: options
-    }];
+function createEventOff() {
+    $('#sessionDevice').off('ionChange');
+    $('#sessionName').off('input');
+    $('#sessionOpen').off('click');
 }
 
-function onAudioDevice() {
-    $.ajax({
-        type: 'GET',
-        url: api + 'spotify/devices/' + sessionStorage.getItem('userId'),
-        contentType: 'application/json; charset=utf-8',
-        statusCode: {
-            403: function(xhr) {
-                console.log(xhr['responseText']);
-                // wip...
-            }
-        },
-        success: function(response) {
-            openPicker(response);
-        }
-    });
+function checkSessionDevice() {
+    return $('#sessionDevice').val() !== 'Audio Device' && $('#sessionDevice').val() !== '';
 }
 
-// wip: Add warning if no audio device is selected
-$('#sessionName').on('input', function() {
-    if($(this).val().length > 2 && $(this).val().length < 26) {
-        $('#sessionNameWarning').addClass('ion-hide');
-        $('#sessionCreate').prop('disabled', false);
-    } else {
+function checkSessionName() {
+    return $('#sessionName').val().length > 2 && $('#sessionName').val().length < 26;
+}
+
+function checkSessionCreate() {
+    $('#sessionCreate').prop(
+        'disabled',
+        !(checkSessionDevice() && checkSessionName())
+    );
+}
+
+function onSessionName() {
+    if(!checkSessionName()) {
         $('#sessionNameWarning').removeClass('ion-hide');
-        $('#sessionCreate').prop('disabled', true);
+    } else {
+        $('#sessionNameWarning').addClass('ion-hide');
     }
-});
+    checkSessionCreate();
+}
 
-$('#sessionOpen').on('click', function() {
+function onSessionOpen() {
     if($(this).attr('class').search('toggle-checked') === -1) {
         $.ajax({
             type: 'GET',
@@ -305,7 +296,33 @@ $('#sessionOpen').on('click', function() {
     } else {
         $('#sessionFriendsList').empty();
     }
-});
+}
+
+function onAudioDevice() {
+    $.ajax({
+        type: 'GET',
+        url: api + 'spotify/devices/' + sessionStorage.getItem('userId'),
+        contentType: 'application/json; charset=utf-8',
+        statusCode: {
+            403: function(xhr) {
+                console.log(xhr['responseText']);
+                // wip: Alert that no devices is available
+            }
+        },
+        success: function(response) {
+            $('#sessionDevice').empty();
+            $.each(response, function(i) {
+                $('#sessionDevice').append(
+                    '<ion-select-option value="' +
+                    response[i].id +
+                    '">' +
+                    response[i].name +
+                    '</ion-select-option>'
+                );
+            });
+        }
+    });
+}
 
 function onCreateSession() {
     let invitations = [];
@@ -323,15 +340,15 @@ function onCreateSession() {
         contentType: 'application/json; charset=utf-8',
         data: JSON.stringify({
             userId: sessionStorage.getItem('userId'),
+            deviceId: $('#sessionDevice').val(),
             name: $('#sessionName').val(),
-            deviceName: $('sessionDevice').val(),
             invitations: invitations
         }),
         statusCode: {
             403: function(xhr) {
                 console.log(xhr['responseText']);
                 // wip...
-                alert('You are already in a session');
+                showAlert('Attention', 'You are already in a session');
             }
         },
         success: function(response) {
@@ -520,7 +537,8 @@ function addToSessionTrackList(track) {
         track.artist +
         '</p></ion-label><ion-label class="ion-hide-md-down ion-text-center"><p>' +
         time +
-        '</p></ion-label><ion-label class="ion-text-end"><ion-icon name="hand-left-outline"></ion-icon>' +
+        '</p></ion-label><ion-label class="ion-text-end">' +
+        '<ion-icon name="hand-left-outline"></ion-icon>' +
         track.votes +
         '<ion-button id="' +
         track.id +
@@ -609,6 +627,7 @@ function onSearchTrack(name) {
                     $.each(response, function(i) {
                     let time = msToTime(response[i].timeMs);
                     $('#trackList').append(
+                        // wip: Error with artists and names containing '
                         '<ion-item button onclick="onSelectTrack({' +
                             "'" + 'id' + "'" + ':' +
                             "'" + response[i].id + "'," +

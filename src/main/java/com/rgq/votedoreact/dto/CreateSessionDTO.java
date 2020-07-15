@@ -9,7 +9,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class CreateSessionDTO {
     private String userId;
+    private String deviceId;
     private String name;
-    private String deviceName;
     private String[] invitations;
 }

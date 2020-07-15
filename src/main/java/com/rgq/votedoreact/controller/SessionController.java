@@ -96,6 +96,7 @@ public class SessionController {
                     final Boolean open = (createSessionDTO.getInvitations() == null);
                     return service.save(new Session(
                         null,
+                        createSessionDTO.getDeviceId(),
                         createSessionDTO.getName(),
                         open,
                         user,

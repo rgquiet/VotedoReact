@@ -2,6 +2,7 @@ package com.rgq.votedoreact.service;
 
 import com.rgq.votedoreact.config.SpotifyAuthConfig;
 import com.rgq.votedoreact.dto.AccessDTO;
+import com.rgq.votedoreact.dto.DeviceDTO;
 import com.rgq.votedoreact.dto.TrackDTO;
 import com.wrapper.spotify.SpotifyApi;
 import com.wrapper.spotify.exceptions.SpotifyWebApiException;
@@ -103,21 +104,27 @@ public class SpotifyService {
         return null;
     }
 
-    public List<String> getAvailableDevices(String accessToken) {
+    public List<DeviceDTO> getAvailableDevices(String accessToken) {
         SpotifyApi api = new SpotifyApi.Builder().setAccessToken(accessToken).build();
         GetUsersAvailableDevicesRequest devicesRequest = api.getUsersAvailableDevices().build();
         try {
             final CompletableFuture<Device[]> future = devicesRequest.executeAsync();
             return future.thenApply(devices -> {
-                List<String> deviceNames = new ArrayList<>();
+                List<DeviceDTO> dtos = new ArrayList<>();
                 if(devices.length == 0) {
-                    deviceNames.add("No devices available");
+                    dtos.add(new DeviceDTO(
+                        "No devices available",
+                        null
+                    ));
                 } else {
                     for(int i = 0; i < devices.length; i++) {
-                        deviceNames.add(devices[i].getName());
+                        dtos.add(new DeviceDTO(
+                            devices[i].getId(),
+                            devices[i].getName()
+                        ));
                     }
                 }
-                return deviceNames;
+                return dtos;
             }).get();
         } catch(InterruptedException e) {
             logger.error("{}", e);

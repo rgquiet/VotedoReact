@@ -1,6 +1,7 @@
 package com.rgq.votedoreact.controller;
 
 import com.rgq.votedoreact.dto.AccessDTO;
+import com.rgq.votedoreact.dto.DeviceDTO;
 import com.rgq.votedoreact.dto.TrackDTO;
 import com.rgq.votedoreact.model.User;
 import com.rgq.votedoreact.service.SpotifyService;
@@ -61,12 +62,12 @@ public class SpotifyController {
     }
 
     @GetMapping("/devices/{userId}")
-    public Mono<ResponseEntity<List<String>>> getDevicesByUser(@PathVariable String userId) {
+    public Mono<ResponseEntity<?>> getDevicesByUser(@PathVariable String userId) {
         return userService.getById(userId)
             .map(user -> service.getAvailableDevices(user.getAccessToken()))
             .map(response -> {
-                if(response.get(0).equals("No devices available")) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+                if(response.get(0).getId().equals("No devices available")) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No devices available");
                 } else {
                     return ResponseEntity.ok(response);
                 }
