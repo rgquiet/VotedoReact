@@ -1,7 +1,6 @@
 package com.rgq.votedoreact.controller;
 
 import com.rgq.votedoreact.dto.AccessDTO;
-import com.rgq.votedoreact.dto.DeviceDTO;
 import com.rgq.votedoreact.dto.TrackDTO;
 import com.rgq.votedoreact.model.User;
 import com.rgq.votedoreact.service.SpotifyService;
@@ -17,9 +16,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/spotify")
 public class SpotifyController {
-    private SpotifyService service;
-    private UserService userService;
-    private UserEventService userEventService;
+    private final SpotifyService service;
+    private final UserService userService;
+    private final UserEventService userEventService;
 
     public SpotifyController(
         SpotifyService service,
@@ -29,6 +28,11 @@ public class SpotifyController {
         this.service = service;
         this.userService = userService;
         this.userEventService = userEventService;
+    }
+
+    @GetMapping("/test/{accessToken}")
+    public void getTest(@PathVariable String accessToken) {
+        service.getPlaybackStatus(accessToken);
     }
 
     @GetMapping("/auth")
@@ -75,7 +79,7 @@ public class SpotifyController {
     }
 
     @GetMapping("/findTracks/{name}")
-    public ResponseEntity<List<TrackDTO>> getTracksByName(@PathVariable String name) {
-        return ResponseEntity.ok(service.searchSpotifyTrack(name));
+    public ResponseEntity<List<TrackDTO>> findTracksByName(@PathVariable String name) {
+        return ResponseEntity.ok(service.searchTrackByName(name));
     }
 }

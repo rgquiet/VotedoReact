@@ -20,9 +20,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
-    private UserService service;
-    private UserEventService eventService;
-    private SessionEventService sessionEventService;
+    private final UserService service;
+    private final UserEventService eventService;
+    private final SessionEventService sessionEventService;
 
     public UserController(
         UserService service,
@@ -44,18 +44,18 @@ public class UserController {
         if(name.equals("_")) {
             name = "";
         }
-        return service.getByUsernameLike(name).map(user -> service.userDTOMapper(user));
+        return service.getByUsernameLike(name).map(service::userDTOMapper);
     }
 
     @GetMapping("/friends/{id}")
     public Mono<ResponseEntity<List<FriendDTO>>> getFriendsById(@PathVariable String id) {
         return service.getById(id)
-            .map(user -> user.getFriends())
+            .map(User::getFriends)
             .flatMapMany(Flux::fromIterable)
-            .flatMap(friendId -> service.getById(friendId))
+            .flatMap(service::getById)
             .map(friend -> new FriendDTO(friend.getId(), friend.getUsername(), friend.getImgUrl()))
             .collectList()
-            .map(friends -> ResponseEntity.ok(friends));
+            .map(ResponseEntity::ok);
     }
 
     @PostMapping("/friend")
@@ -105,12 +105,10 @@ public class UserController {
                 trackDTO.getTimeMs(),
                 0
             );
-            service.save(user).subscribe(saved -> {
-                sessionEventService
-                    .getPublishers()
-                    .get(saved.getSessionId())
-                    .publishEvent(new SessionSSE(EventType.TRACKCREATE, sessionTrack));
-            });
+            service.save(user).subscribe(saved -> sessionEventService
+                .getPublishers()
+                .get(saved.getSessionId())
+                .publishEvent(new SessionSSE(EventType.TRACKCREATE, sessionTrack)));
             return ResponseEntity.ok(trackDTO.getId() + " saved");
         });
     }

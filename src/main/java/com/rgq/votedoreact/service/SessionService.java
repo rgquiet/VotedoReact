@@ -15,8 +15,8 @@ import java.util.List;
 
 @Service
 public class SessionService {
-    private SessionRepo repo;
-    private UserEventService userEventService;
+    private final SessionRepo repo;
+    private final UserEventService userEventService;
 
     public SessionService(SessionRepo repo, UserEventService userEventService) {
         this.repo = repo;
@@ -60,8 +60,8 @@ public class SessionService {
     public SessionTrackDTO sessionTrackDTOMapper(TrackDTO track, List<Vote> votes, String userId) {
         Integer trackVote = 0;
         // Counts votes of the song in the session
-        for(int i = 0; i < votes.size(); i++) {
-            if(votes.get(i).getTrackId().equals(track.getId())) {
+        for(Vote vote : votes) {
+            if (vote.getTrackId().equals(track.getId())) {
                 trackVote++;
             }
         }

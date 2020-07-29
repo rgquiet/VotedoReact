@@ -8,8 +8,8 @@ import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.FluxSink;
 
 public class SessionEventPublisher {
-    private final FluxProcessor processor;
-    private final FluxSink sink;
+    private final FluxProcessor<SessionSSE, SessionSSE> processor;
+    private final FluxSink<SessionSSE> sink;
 
     public SessionEventPublisher() {
         this.processor = DirectProcessor.<SessionSSE>create().serialize();
@@ -20,7 +20,7 @@ public class SessionEventPublisher {
         sink.next(event);
     }
 
-    public Flux<ServerSentEvent> subPublisher() {
+    public Flux<ServerSentEvent<?>> subPublisher() {
         return processor.map(e -> ServerSentEvent.builder(e).build());
     }
 }

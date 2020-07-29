@@ -11,15 +11,17 @@ import reactor.core.publisher.Mono;
 
 @Service
 public class UserEventService {
-    private ReactiveMongoTemplate template;
+    private final ReactiveMongoTemplate template;
 
     public UserEventService(ReactiveMongoTemplate template) {
         this.template = template;
     }
 
+    /*
     public void dropCollectionByName(String name) {
         template.dropCollection(name).subscribe();
     }
+    */
 
     public void createCollectionWithName(String name) {
         template.createCollection(

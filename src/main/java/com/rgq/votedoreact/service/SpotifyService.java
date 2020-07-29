@@ -7,11 +7,15 @@ import com.rgq.votedoreact.dto.TrackDTO;
 import com.wrapper.spotify.SpotifyApi;
 import com.wrapper.spotify.exceptions.SpotifyWebApiException;
 import com.wrapper.spotify.model_objects.credentials.ClientCredentials;
+import com.wrapper.spotify.model_objects.miscellaneous.CurrentlyPlayingContext;
 import com.wrapper.spotify.model_objects.miscellaneous.Device;
 import com.wrapper.spotify.model_objects.specification.Paging;
 import com.wrapper.spotify.model_objects.specification.Track;
 import com.wrapper.spotify.model_objects.specification.User;
+import com.wrapper.spotify.requests.data.player.AddItemToUsersPlaybackQueueRequest;
+import com.wrapper.spotify.requests.data.player.GetInformationAboutUsersCurrentPlaybackRequest;
 import com.wrapper.spotify.requests.data.player.GetUsersAvailableDevicesRequest;
+import com.wrapper.spotify.requests.data.player.StartResumeUsersPlaybackRequest;
 import com.wrapper.spotify.requests.data.search.simplified.SearchTracksRequest;
 import com.wrapper.spotify.requests.data.tracks.GetTrackRequest;
 import com.wrapper.spotify.requests.data.users_profile.GetCurrentUsersProfileRequest;
@@ -56,12 +60,8 @@ public class SpotifyService {
         try {
             ClientCredentials credentials = apiPublic.clientCredentials().build().execute();
             apiPublic.setAccessToken(credentials.getAccessToken());
-        } catch(IOException e) {
-            logger.error("{}", e);
-        } catch(SpotifyWebApiException e) {
-            logger.error("{}", e);
-        } catch(ParseException e) {
-            logger.error("{}", e);
+        } catch(IOException | SpotifyWebApiException | ParseException e) {
+            logger.error("Error occurred: ", e);
         }
     }
 
@@ -75,6 +75,7 @@ public class SpotifyService {
         try {
             final CompletableFuture<User> future = userRequest.executeAsync();
             return future.thenApply(userProfile -> {
+                // wip: Only premium users are allowed to create a session
                 com.rgq.votedoreact.model.User user = new com.rgq.votedoreact.model.User(
                     userProfile.getId(),
                     null,
@@ -92,14 +93,10 @@ public class SpotifyService {
                 }
                 return user;
             }).get();
-        } catch(InterruptedException e) {
-            logger.error("{}", e);
-        } catch(ExecutionException e) {
-            logger.error("{}", e);
-        } catch(CompletionException e) {
-            logger.error("{}", e);
+        } catch(InterruptedException | ExecutionException | CompletionException e) {
+            logger.error("Error occurred: ", e);
         } catch(CancellationException e) {
-            logger.info("{}", "Async operation cancelled.");
+            logger.info("Async operation cancelled");
         }
         return null;
     }
@@ -117,80 +114,120 @@ public class SpotifyService {
                         null
                     ));
                 } else {
-                    for(int i = 0; i < devices.length; i++) {
+                    for(Device device : devices) {
                         dtos.add(new DeviceDTO(
-                            devices[i].getId(),
-                            devices[i].getName()
+                            device.getId(),
+                            device.getName()
                         ));
                     }
                 }
                 return dtos;
             }).get();
-        } catch(InterruptedException e) {
-            logger.error("{}", e);
-        } catch(ExecutionException e) {
-            logger.error("{}", e);
-        } catch(CompletionException e) {
-            logger.error("{}", e);
+        } catch(InterruptedException | ExecutionException | CompletionException e) {
+            logger.error("Error occurred: ", e);
         } catch(CancellationException e) {
-            logger.info("{}", "Async operation cancelled.");
+            logger.info("Async operation cancelled");
         }
         return null;
+    }
+
+    public void getPlaybackStatus(String accessToken) {
+        SpotifyApi api = new SpotifyApi.Builder().setAccessToken(accessToken).build();
+        GetInformationAboutUsersCurrentPlaybackRequest playbackRequest =
+        api.getInformationAboutUsersCurrentPlayback().build();
+        final CompletableFuture<CurrentlyPlayingContext> future = playbackRequest.executeAsync();
+        try {
+            future.thenApply(playback -> {
+                // wip...
+                System.out.println(playback.getTimestamp());
+                System.out.println(playback.getIs_playing());
+                System.out.println(playback.getCurrentlyPlayingType());
+                Track track = (Track)playback.getItem();
+                System.out.println(track.getDurationMs());
+                System.out.println(track.getName());
+                System.out.println(playback.getProgress_ms());
+                return playback;
+            }).get();
+        } catch(InterruptedException | ExecutionException | CompletionException e) {
+            logger.error("Error occurred: ", e);
+        } catch(CancellationException e) {
+            logger.info("Async operation cancelled");
+        }
     }
 
     public TrackDTO getTrackById(String id) {
         GetTrackRequest trackRequest = apiPublic.getTrack(id).build();
         try {
             final CompletableFuture<Track> future = trackRequest.executeAsync();
-            return future.thenApply(result -> trackDTOMapper(result)).get();
-        } catch(InterruptedException e) {
-            logger.error("{}", e);
-        } catch(ExecutionException e) {
-            logger.error("{}", e);
-            refreshAccessToken();
-        } catch(CompletionException e) {
-            logger.error("{}", e);
+            return future.thenApply(this::trackDTOMapper).get();
+        } catch(InterruptedException | ExecutionException | CompletionException e) {
+            logger.error("Error occurred: ", e);
         } catch(CancellationException e) {
-            logger.info("{}", "Async operation cancelled.");
+            logger.info("Async operation cancelled");
         }
         return null;
     }
 
-    public List<TrackDTO> searchSpotifyTrack(String name) {
+    public List<TrackDTO> searchTrackByName(String name) {
         SearchTracksRequest trackRequest = apiPublic.searchTracks(name).limit(10).build();
         try {
             final CompletableFuture<Paging<Track>> pagingFuture = trackRequest.executeAsync();
             return pagingFuture.thenApply(result -> {
                 List<TrackDTO> dtos = new ArrayList<>();
                 Track[] tracks = result.getItems();
-                for(int i = 0; i < tracks.length; i++) {
-                    dtos.add(trackDTOMapper(tracks[i]));
+                for(Track track : tracks) {
+                    dtos.add(trackDTOMapper(track));
                 }
                 return dtos;
             }).get();
-        } catch(InterruptedException e) {
-            logger.error("{}", e);
-        } catch(ExecutionException e) {
-            logger.error("{}", e);
-            refreshAccessToken();
-        } catch(CompletionException e) {
-            logger.error("{}", e);
+        } catch(InterruptedException | ExecutionException | CompletionException e) {
+            logger.error("Error occurred: ", e);
         } catch(CancellationException e) {
-            logger.info("{}", "Async operation cancelled.");
+            logger.info("Async operation cancelled");
         }
         return null;
     }
 
-    private TrackDTO trackDTOMapper(Track track) {
-        String artists = new String();
-        for(int j = 0; j < track.getArtists().length; j++) {
-            artists = artists + track.getArtists()[j].getName() + ", ";
+    public void startPlaybackOnDevice(String accessToken, String deviceId) {
+        SpotifyApi api = new SpotifyApi.Builder().setAccessToken(accessToken).build();
+        StartResumeUsersPlaybackRequest startPlaybackRequest = api
+            .startResumeUsersPlayback()
+            // Start playback with the default track 'Twisted Fate'
+            .context_uri("spotify:album:1M6lrKUjfIiMpitc0xeh3x")
+            .device_id(deviceId)
+            .build();
+        try {
+            startPlaybackRequest.executeAsync().get();
+        } catch(InterruptedException | ExecutionException e) {
+            logger.error("Error occurred: ", e);
         }
-        artists = artists.substring(0, artists.length() - 2);
+    }
+
+    /*
+    public void addTrackToQueue(String accessToken, String deviceId, String trackId) {
+        SpotifyApi api = new SpotifyApi.Builder().setAccessToken(accessToken).build();
+        AddItemToUsersPlaybackQueueRequest queueRequest = api
+            .addItemToUsersPlaybackQueue("spotify:track:" + trackId)
+            .device_id(deviceId)
+            .build();
+        try {
+            queueRequest.executeAsync().get();
+        } catch(InterruptedException | ExecutionException e) {
+            logger.error("Error occurred: ", e);
+        }
+    }
+    */
+
+    private TrackDTO trackDTOMapper(Track track) {
+        StringBuilder artists = new StringBuilder();
+        for(int j = 0; j < track.getArtists().length; j++) {
+            artists.append(track.getArtists()[j].getName()).append(", ");
+        }
+        artists = new StringBuilder(artists.substring(0, artists.length() - 2));
         return new TrackDTO(
             track.getId(),
             track.getName(),
-            artists,
+            artists.toString(),
             track.getAlbum().getImages()[0].getUrl(),
             track.getDurationMs()
         );

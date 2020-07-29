@@ -21,10 +21,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/session")
 public class SessionController {
-    private SessionService service;
-    private SessionEventService eventService;
-    private UserService userService;
-    private SpotifyService spotifyService;
+    private final SessionService service;
+    private final SessionEventService eventService;
+    private final UserService userService;
+    private final SpotifyService spotifyService;
 
     public SessionController(
         SessionService service,
@@ -39,7 +39,7 @@ public class SessionController {
     }
 
     @GetMapping(value = "/sub/{name}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent> subEventStream(@PathVariable String name) {
+    public Flux<ServerSentEvent<?>> subEventStream(@PathVariable String name) {
         return eventService.getPublishers().get(name).subPublisher();
     }
 
@@ -55,7 +55,7 @@ public class SessionController {
         if(name.equals("_")) {
             name = "";
         }
-        return service.getOpenByNameLike(name).map(session -> service.sessionDTOMapper(session));
+        return service.getOpenByNameLike(name).map(service::sessionDTOMapper);
     }
 
     @PostMapping("/leave/{id}")
@@ -103,9 +103,11 @@ public class SessionController {
                         new ArrayList<>(),
                         new ArrayList<>()
                     )).map(session -> {
-                        eventService.getPublishers().put(session.getId(), new SessionEventPublisher());
                         user.setSessionId(session.getId());
                         userService.save(user).subscribe();
+                        spotifyService.startPlaybackOnDevice(user.getAccessToken(), session.getDeviceId());
+                        // Create a SSE publisher for the new session
+                        eventService.getPublishers().put(session.getId(), new SessionEventPublisher());
                         if(!open) {
                             for(int i = 0; i < createSessionDTO.getInvitations().length; i++) {
                                 service.sendInvitation(
