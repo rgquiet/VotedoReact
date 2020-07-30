@@ -22,5 +22,7 @@ public class Session {
     private User owner;
     @DBRef
     private List<User> members;
+    private Track currentTrack;
+    private List<Track> playedTracks;
     private List<Vote> votes;
 }

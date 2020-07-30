@@ -131,28 +131,29 @@ public class SpotifyService {
         return null;
     }
 
-    public void getPlaybackStatus(String accessToken) {
+    public com.rgq.votedoreact.model.Track getPlaybackStatus(String accessToken) {
         SpotifyApi api = new SpotifyApi.Builder().setAccessToken(accessToken).build();
         GetInformationAboutUsersCurrentPlaybackRequest playbackRequest =
         api.getInformationAboutUsersCurrentPlayback().build();
         final CompletableFuture<CurrentlyPlayingContext> future = playbackRequest.executeAsync();
         try {
-            future.thenApply(playback -> {
-                // wip...
-                System.out.println(playback.getTimestamp());
-                System.out.println(playback.getIs_playing());
-                System.out.println(playback.getCurrentlyPlayingType());
-                Track track = (Track)playback.getItem();
-                System.out.println(track.getDurationMs());
-                System.out.println(track.getName());
-                System.out.println(playback.getProgress_ms());
-                return playback;
+            return future.thenApply(playback -> {
+                if(playback.getItem() instanceof Track) {
+                    Track spotifyTrack = (Track)playback.getItem();
+                    return new com.rgq.votedoreact.model.Track(
+                        trackDTOMapper(spotifyTrack),
+                        playback.getProgress_ms(),
+                        playback.getTimestamp()
+                    );
+                }
+                return null;
             }).get();
         } catch(InterruptedException | ExecutionException | CompletionException e) {
             logger.error("Error occurred: ", e);
         } catch(CancellationException e) {
             logger.info("Async operation cancelled");
         }
+        return null;
     }
 
     public TrackDTO getTrackById(String id) {

@@ -326,7 +326,7 @@ function onAudioDevice() {
 
 function onCreateSession() {
     let invitations = [];
-    if($('#sessionOpen').attr('class').search('checkbox-checked') !== -1) {
+    if($('#sessionOpen').attr('class').search('toggle-checked') !== -1) {
         $('#sessionFriendsList .checkbox-checked').each(function() {
             invitations.push($(this).attr('id'));
         });
@@ -519,8 +519,11 @@ function onSessionEvent(event) {
         case 'TRACKREMOVE':
             onTrackRemove(response['dto']);
             break;
-        case 'NEWVOTE':
-            onNewVote(response['dto']);
+        case 'TRACKSTART':
+            onTrackStart(response['dto']);
+            break;
+        case 'VOTENEW':
+            onVoteNew(response['dto']);
             break;
     }
 }
@@ -559,12 +562,17 @@ function onTrackRemove(track) {
     console.log(track);
 }
 
+function onTrackStart(track) {
+    // wip...
+    console.log(track);
+}
+
 function revokeMyTrack(tag) {
     // wip...
     console.log(tag.attr('id'));
 }
 
-function onNewVote(vote) {
+function onVoteNew(vote) {
     // wip...
     console.log(vote);
 }

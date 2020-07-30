@@ -30,11 +30,6 @@ public class SpotifyController {
         this.userEventService = userEventService;
     }
 
-    @GetMapping("/test/{accessToken}")
-    public void getTest(@PathVariable String accessToken) {
-        service.getPlaybackStatus(accessToken);
-    }
-
     @GetMapping("/auth")
     public ResponseEntity<String> getAuth() {
         return ResponseEntity.ok(service.getUrl());

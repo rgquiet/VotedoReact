@@ -3,10 +3,10 @@ package com.rgq.votedoreact.controller;
 import com.rgq.votedoreact.config.SessionEventPublisher;
 import com.rgq.votedoreact.dto.*;
 import com.rgq.votedoreact.model.Session;
-import com.rgq.votedoreact.service.SessionEventService;
-import com.rgq.votedoreact.service.SessionService;
-import com.rgq.votedoreact.service.SpotifyService;
-import com.rgq.votedoreact.service.UserService;
+import com.rgq.votedoreact.model.Track;
+import com.rgq.votedoreact.service.*;
+import com.rgq.votedoreact.sse.EventType;
+import com.rgq.votedoreact.sse.SessionSSE;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,17 +23,20 @@ import java.util.List;
 public class SessionController {
     private final SessionService service;
     private final SessionEventService eventService;
+    private final SchedulingService schedulingService;
     private final UserService userService;
     private final SpotifyService spotifyService;
 
     public SessionController(
         SessionService service,
         SessionEventService eventService,
+        SchedulingService schedulingService,
         UserService userService,
         SpotifyService spotifyService
     ) {
         this.service = service;
         this.eventService = eventService;
+        this.schedulingService = schedulingService;
         this.userService = userService;
         this.spotifyService = spotifyService;
     }
@@ -93,6 +96,8 @@ public class SessionController {
         return userService.getById(createSessionDTO.getUserId())
             .flatMap(user -> {
                 if(user.getSessionId() == null) {
+                    spotifyService.startPlaybackOnDevice(user.getAccessToken(), createSessionDTO.getDeviceId());
+                    final Track track = spotifyService.getPlaybackStatus(user.getAccessToken());
                     final Boolean open = (createSessionDTO.getInvitations() == null);
                     return service.save(new Session(
                         null,
@@ -101,13 +106,28 @@ public class SessionController {
                         open,
                         user,
                         new ArrayList<>(),
+                        track,
+                        new ArrayList<>(),
                         new ArrayList<>()
                     )).map(session -> {
                         user.setSessionId(session.getId());
                         userService.save(user).subscribe();
-                        spotifyService.startPlaybackOnDevice(user.getAccessToken(), session.getDeviceId());
                         // Create a SSE publisher for the new session
                         eventService.getPublishers().put(session.getId(), new SessionEventPublisher());
+                        eventService.getPublishers().get(session.getId())
+                            .publishEvent(new SessionSSE(
+                                EventType.TRACKSTART,
+                                new CurrentTrackDTO(
+                                    track.getTrackInfos().getId(),
+                                    track.getTrackInfos().getName(),
+                                    track.getTrackInfos().getArtist(),
+                                    track.getTrackInfos().getImgUrl(),
+                                    track.getTrackInfos().getTimeMs(),
+                                    track.getTimestamp()
+                                )
+                            ));
+                        // Add new session to the scheduling service
+                        schedulingService.getMonitoredSessions().add(session);
                         if(!open) {
                             for(int i = 0; i < createSessionDTO.getInvitations().length; i++) {
                                 service.sendInvitation(

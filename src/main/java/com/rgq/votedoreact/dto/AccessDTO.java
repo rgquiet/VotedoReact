@@ -9,5 +9,5 @@ import lombok.Setter;
 @NoArgsConstructor
 public class AccessDTO {
     private String accessToken;
-    private long timestamp;
+    private Long timestamp;
 }
