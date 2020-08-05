@@ -7,11 +7,9 @@ import lombok.Setter;
 @Getter
 @Setter
 @AllArgsConstructor
-public class CurrentTrackDTO {
+public class JoinSessionDTO {
     private String id;
     private String name;
-    private String artist;
-    private String imgUrl;
-    private Integer timeMs;
-    private Long startMs;
+    private Integer votes;
+    private CurrentTrackDTO track;
 }

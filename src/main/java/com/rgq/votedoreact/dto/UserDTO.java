@@ -12,4 +12,5 @@ public class UserDTO {
     private String sessionId;
     private String username;
     private String imgUrl;
+    private Integer votes;
 }

@@ -57,7 +57,7 @@ public class SpotifyController {
                 userEventService.createCollectionWithName(user.getId());
                 return userService.save(user);
             }
-        }).map(savedUser -> ResponseEntity.ok(userService.userDTOMapper(savedUser)));
+        }).map(saved -> ResponseEntity.ok(userService.userDTOMapper(saved)));
     }
 
     @GetMapping("/devices/{userId}")

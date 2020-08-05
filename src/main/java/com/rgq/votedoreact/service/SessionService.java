@@ -1,9 +1,9 @@
 package com.rgq.votedoreact.service;
 
-import com.rgq.votedoreact.dto.SessionDTO;
-import com.rgq.votedoreact.dto.SessionTrackDTO;
-import com.rgq.votedoreact.dto.TrackDTO;
+import com.rgq.votedoreact.dto.*;
 import com.rgq.votedoreact.model.Vote;
+import com.rgq.votedoreact.sse.EventType;
+import com.rgq.votedoreact.sse.SessionSSE;
 import com.rgq.votedoreact.sse.UserSSE;
 import com.rgq.votedoreact.model.Session;
 import com.rgq.votedoreact.repo.SessionRepo;
@@ -16,11 +16,20 @@ import java.util.List;
 @Service
 public class SessionService {
     private final SessionRepo repo;
+    private final UserService userService;
     private final UserEventService userEventService;
+    private final SessionEventService sessionEventService;
 
-    public SessionService(SessionRepo repo, UserEventService userEventService) {
+    public SessionService(
+        SessionRepo repo,
+        UserService userService,
+        UserEventService userEventService,
+        SessionEventService sessionEventService
+    ) {
         this.repo = repo;
+        this.userService = userService;
         this.userEventService = userEventService;
+        this.sessionEventService = sessionEventService;
     }
 
     public Mono<Session> save(Session session) {
@@ -32,7 +41,7 @@ public class SessionService {
     }
 
     public Flux<Session> getOpenByNameLike(String name) {
-        return repo.findAllByOpenAndNameLike(true, name);
+        return repo.findAllByOpenAndNameLike(true, name).limitRequest(10);
     }
 
     public void sendInvitation(String sessionId, String session, String username, String userId) {
@@ -44,6 +53,18 @@ public class SessionService {
             ),
             userId)
         .subscribe();
+    }
+
+    public void evaluateNextTrack(Session session) {
+        // wip...
+        // Distribute new vote to each session member
+        userService.incVote(session.getOwner());
+        session.getMembers().forEach(userService::incVote);
+        sessionEventService.getPublishers().get(session.getId())
+            .publishEvent(new SessionSSE(
+                EventType.VOTENEW,
+                null
+            ));
     }
 
     public SessionDTO sessionDTOMapper(Session session) {

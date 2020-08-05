@@ -30,12 +30,12 @@
                     <ion-avatar id="me" class="ion-hide" slot="start">
                         <img id="userImg"/>
                     </ion-avatar>
-                    <ion-title id="userName" style="padding: 0px 10px;">Guest</ion-title>
+                    <ion-title id="userName" style="padding: 0 10px;">Guest</ion-title>
                 </ion-toolbar>
             </ion-header>
 
             <ion-content>
-                <div style="padding: 5px 8px 0px 8px;">
+                <div style="padding: 5px 8px 0 8px;">
                     <ion-button id="logInOut" color="primary" expand="block"
                                 onclick="logInOut($(this));">Login</ion-button>
                 </div>
@@ -53,13 +53,33 @@
                         <ion-menu-button></ion-menu-button>
                     </ion-buttons>
                     <ion-title id="votedo" class="ion-text-center">Votedo</ion-title>
+
+                    <ion-item id="header-session" lines="none" class="ion-hide">
+                        <ion-label id="myVotes" class="ion-text-start ion-margin-end"
+                                   style="min-width: 40px; max-width: 40px;">
+                            <ion-icon name="hand-left-outline"></ion-icon>
+                        </ion-label>
+                        <ion-title id="sessionTitle" class="ion-text-center"></ion-title>
+                        <ion-button fill="clear" slot="end" color="dark"
+                                    onclick="showAlert('Attention', 'Do you want to leave this session?', [
+                                        {
+                                            text: 'Cancel',
+                                            role: 'cancel',
+                                        }, {
+                                            text: 'Leave',
+                                            handler: () => { onLeaveSession(); }
+                                        }
+                                    ]);">
+                            <ion-icon name="close-outline"></ion-icon>
+                        </ion-button>
+                    </ion-item>
                 </ion-toolbar>
             </ion-header>
 
             <ion-content id="page-home" class="ion-padding display">
-                <ion-grid>
+                <ion-grid class="ion-no-padding">
                     <ion-row>
-                        <ion-col size-md="8" offset-md="2">
+                        <ion-col class="ion-no-padding" size-md="8" offset-md="2">
                             <ion-searchbar oninput="onPublicSession($(this).val());"></ion-searchbar>
                             <ion-list id="publicSessionList"></ion-list>
                         </ion-col>
@@ -69,9 +89,9 @@
 
             <ion-content id="page-create" class="ion-padding ion-hide">
                 <form>
-                    <ion-grid>
+                    <ion-grid class="ion-no-padding">
                         <ion-row>
-                            <ion-col size-md="6" offset-md="3">
+                            <ion-col class="ion-no-padding" size-md="6" offset-md="3">
                                 <ion-button id="sessionCreate" color="primary" expand="block"
                                             disabled="disabled" onclick="onCreateSession();">Create</ion-button>
 
@@ -105,15 +125,10 @@
             </ion-content>
 
             <ion-content id="page-friends" class="ion-padding ion-hide">
-                <div class="ion-hide-md-down" style="position: absolute; left: 90%; top: 5%; z-index: 1;">
-                    <ion-fab-button onclick="createFriendModal();">
-                        <ion-icon name="add"></ion-icon>
-                    </ion-fab-button>
-                </div>
-
-                <ion-grid>
+                <ion-grid class="ion-no-padding">
                     <ion-row>
-                        <ion-col size-md="8" offset-md="2">
+                        <ion-col class="ion-no-padding" size-md="6" offset-md="3">
+                            <ion-searchbar onclick="createFriendModal();"></ion-searchbar>
                             <ion-list id="myFriendsList"></ion-list>
                         </ion-col>
                     </ion-row>
@@ -121,19 +136,15 @@
             </ion-content>
 
             <ion-content id="page-session" class="ion-padding ion-hide">
-                <div class="ion-hide-md-down" style="position: absolute; left: 90%; top: 5%; z-index: 1;">
-                    <ion-fab-button onclick="createTrackModal();">
-                        <ion-icon name="add"></ion-icon>
-                    </ion-fab-button>
-                </div>
-
-                <ion-grid>
+                <ion-grid class="ion-no-padding">
                     <ion-row>
-                        <ion-col size-md="8" offset-md="2">
+                        <ion-col class="ion-no-padding" size-md="8" offset-md="2">
                             <ion-list id="sessionTrackList"></ion-list>
                         </ion-col>
                     </ion-row>
                 </ion-grid>
+                <ion-progress-bar style="position: absolute; left: 0; bottom: 56px; width: 100%; z-index: 1;"
+                                  class="ion-hide-md-up"></ion-progress-bar>
             </ion-content>
 
             <ion-tab-bar id="bar-main" class="toggle" slot="bottom">
@@ -158,9 +169,14 @@
             </ion-tab-bar>
 
             <ion-tab-bar id="bar-session" class="ion-hide" slot="bottom">
-                <!-- wip: Add session infos (Current track, owner, name, etc.) -->
+                <ion-item id="currentTrackInfo" class="ion-no-padding"
+                          style="width: calc(100% - 112px);"></ion-item>
 
-                <ion-tab-button name="toggleDown" onclick="toggleFooter();">
+                <ion-tab-button name="search" style="width: 56px;" onclick="createTrackModal();">
+                    <ion-icon name="search-outline"></ion-icon>
+                </ion-tab-button>
+
+                <ion-tab-button name="toggleDown" style="width: 56px;" onclick="toggleFooter();">
                     <ion-icon name="caret-down-outline"></ion-icon>
                 </ion-tab-button>
             </ion-tab-bar>

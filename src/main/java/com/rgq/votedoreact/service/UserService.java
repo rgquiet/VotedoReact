@@ -24,10 +24,22 @@ public class UserService {
     }
 
     public Flux<User> getByUsernameLike(String name) {
-        return repo.findAllByUsernameLike(name);
+        return repo.findAllByUsernameLike(name).limitRequest(10);
+    }
+
+    public void incVote(User user) {
+        Integer votes = user.getVotes() + 1;
+        user.setVotes(votes);
+        repo.save(user).subscribe();
     }
 
     public UserDTO userDTOMapper(User user) {
-        return new UserDTO(user.getId(), user.getSessionId(), user.getUsername(), user.getImgUrl());
+        return new UserDTO(
+            user.getId(),
+            user.getSessionId(),
+            user.getUsername(),
+            user.getImgUrl(),
+            user.getVotes()
+        );
     }
 }

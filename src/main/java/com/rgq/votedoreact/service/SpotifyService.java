@@ -2,6 +2,7 @@ package com.rgq.votedoreact.service;
 
 import com.rgq.votedoreact.config.SpotifyAuthConfig;
 import com.rgq.votedoreact.dto.AccessDTO;
+import com.rgq.votedoreact.dto.CurrentTrackDTO;
 import com.rgq.votedoreact.dto.DeviceDTO;
 import com.rgq.votedoreact.dto.TrackDTO;
 import com.wrapper.spotify.SpotifyApi;
@@ -143,7 +144,7 @@ public class SpotifyService {
                     return new com.rgq.votedoreact.model.Track(
                         trackDTOMapper(spotifyTrack),
                         playback.getProgress_ms(),
-                        playback.getTimestamp()
+                        new Date().getTime()
                     );
                 }
                 return null;
@@ -161,7 +162,9 @@ public class SpotifyService {
         try {
             final CompletableFuture<Track> future = trackRequest.executeAsync();
             return future.thenApply(this::trackDTOMapper).get();
-        } catch(InterruptedException | ExecutionException | CompletionException e) {
+        } catch(ExecutionException e) {
+            refreshAccessToken();
+        } catch(InterruptedException | CompletionException e) {
             logger.error("Error occurred: ", e);
         } catch(CancellationException e) {
             logger.info("Async operation cancelled");
@@ -181,7 +184,9 @@ public class SpotifyService {
                 }
                 return dtos;
             }).get();
-        } catch(InterruptedException | ExecutionException | CompletionException e) {
+        } catch(ExecutionException e) {
+            refreshAccessToken();
+        } catch(InterruptedException | CompletionException e) {
             logger.error("Error occurred: ", e);
         } catch(CancellationException e) {
             logger.info("Async operation cancelled");
@@ -204,7 +209,6 @@ public class SpotifyService {
         }
     }
 
-    /*
     public void addTrackToQueue(String accessToken, String deviceId, String trackId) {
         SpotifyApi api = new SpotifyApi.Builder().setAccessToken(accessToken).build();
         AddItemToUsersPlaybackQueueRequest queueRequest = api
@@ -217,7 +221,6 @@ public class SpotifyService {
             logger.error("Error occurred: ", e);
         }
     }
-    */
 
     private TrackDTO trackDTOMapper(Track track) {
         StringBuilder artists = new StringBuilder();
@@ -231,6 +234,17 @@ public class SpotifyService {
             artists.toString(),
             track.getAlbum().getImages()[0].getUrl(),
             track.getDurationMs()
+        );
+    }
+
+    public CurrentTrackDTO currentTrackDTOMapper(com.rgq.votedoreact.model.Track track) {
+        return new CurrentTrackDTO(
+            track.getTrackInfos().getId(),
+            track.getTrackInfos().getName(),
+            track.getTrackInfos().getArtist(),
+            track.getTrackInfos().getImgUrl(),
+            track.getTrackInfos().getTimeMs(),
+            track.getTimestamp() - track.getProgressMs()
         );
     }
 }

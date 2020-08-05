@@ -3,6 +3,10 @@ const api = home + 'api/';
 let currentModal = null;
 let userSse = null;
 let sessionSse = null;
+let interval = null;
+let timeout = 1000;
+let progress = 0;
+let rate = 0;
 
 $(window).on('beforeunload', function() {
     if(userSse) {
@@ -47,6 +51,10 @@ function checkAccessToken() {
                 userSse = new EventSource(api + 'user/sub/' + response['id']);
                 userSse.onmessage = function(event) { onUserEvent(event); }
                 if(response['sessionId']) {
+                    $('#myVotes').empty().append(
+                        '<ion-icon name="hand-left-outline"></ion-icon>' +
+                        response['votes']
+                    );
                     alreadyInSession(response['sessionId']);
                 }
             }
@@ -158,11 +166,11 @@ function rejectInvitation(tag) {
     tag.parent().parent().remove();
 }
 
-async function showAlert(header, message) {
+async function showAlert(header, message, buttons) {
     const alert = await alertController.create({
         header: header,
         message: message,
-        buttons: ['OK']
+        buttons: buttons
     });
     await alert.present();
 }
@@ -215,7 +223,7 @@ function onJoinSession(sessionId) {
                 403: function(xhr) {
                     console.log(xhr['responseText']);
                     // wip...
-                    showAlert('Attention', 'You are already in a session');
+                    showAlert('Attention', 'You are already in a session', ['OK']);
                 }
             },
             success: function(response) {
@@ -224,7 +232,7 @@ function onJoinSession(sessionId) {
             }
         });
     } else {
-        showAlert('Attention', 'Please sign in to join a session');
+        showAlert('Attention', 'Please sign in to join a session', ['OK']);
     }
 }
 
@@ -306,7 +314,7 @@ function onAudioDevice() {
         statusCode: {
             403: function(xhr) {
                 console.log(xhr['responseText']);
-                // wip: Alert that no devices is available
+                // wip: Alert that no device is available
             }
         },
         success: function(response) {
@@ -348,7 +356,7 @@ function onCreateSession() {
             403: function(xhr) {
                 console.log(xhr['responseText']);
                 // wip...
-                showAlert('Attention', 'You are already in a session');
+                showAlert('Attention', 'You are already in a session', ['OK']);
             }
         },
         success: function(response) {
@@ -379,7 +387,7 @@ customElements.define('modal-content-friend', class ModalContent extends HTMLEle
         this.innerHTML = `
             <ion-header>
                 <ion-toolbar>
-                    <ion-title class="ion-text-center">Search Friends</ion-title>
+                    <ion-title class="ion-text-center center-modal-title">Find Friends</ion-title>
                     <ion-buttons slot="end">
                         <ion-button onclick="dismissFriendModal();">
                             <ion-icon name="close-outline"></ion-icon>
@@ -412,7 +420,7 @@ function onSearchFriend(name) {
                     $('#userList').append(
                         '<ion-item button onclick="onInviteFriend(' +
                         "'" + response[i].id + "'" +
-                        ');"><ion-thumbnail><img src="' +
+                        '); dismissFriendModal();"><ion-thumbnail><img src="' +
                         response[i].imgUrl +
                         '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
                         response[i].username +
@@ -440,7 +448,8 @@ function onMyFriends() {
                         response[i].imgUrl +
                         '"/></ion-thumbnail><ion-label class="ion-margin-start">' +
                         response[i].username +
-                        '</ion-label></ion-item>'
+                        '</ion-label><ion-button fill="outline" slot="end" ' +
+                        'onclick="onFriendRemove($(this));">Remove</ion-button></ion-item>'
                     );
                 });
             } else {
@@ -475,6 +484,11 @@ function onInviteFriend(friend) {
     });
 }
 
+function onFriendRemove(tag) {
+    // wip...
+    console.log(tag);
+}
+
 /* Page: 'session' */
 function alreadyInSession(id) {
     $.ajax({
@@ -494,10 +508,23 @@ function alreadyInSession(id) {
 }
 
 function showSessionContent(session) {
+    // Change header and footer
+    $('#sessionTitle').text(session['name']);
+    if(session['votes'] !== null) {
+        $('#myVotes').empty().append(
+            '<ion-icon name="hand-left-outline"></ion-icon>' +
+            session['votes']
+        );
+    }
+    $('#votedo').addClass('ion-hide');
+    $('#header-session').removeClass('ion-hide');
     toggleFooter();
+    onTrackStart(session['track']);
     $('[name="toggleUp"]').removeClass('ion-hide');
+    // Listen to session events
     sessionSse = new EventSource(api + 'session/sub/' + session['id']);
     sessionSse.onmessage = function(event) { onSessionEvent(event); }
+    // Get all tracks in this session
     $.ajax({
         type: 'GET',
         url: api + 'session/getTracks/' + session['id'],
@@ -538,21 +565,21 @@ function addToSessionTrackList(track) {
         track.name +
         '</h2><p>' +
         track.artist +
-        '</p></ion-label><ion-label class="ion-hide-md-down ion-text-center"><p>' +
+        '</p></ion-label><ion-label class="ion-text-center ion-hide-md-down"><p>' +
         time +
         '</p></ion-label><ion-label class="ion-text-end">' +
         '<ion-icon name="hand-left-outline"></ion-icon>' +
         track.votes +
-        '<ion-button id="' +
+        '</ion-label><ion-button id="' +
         track.id +
-        '" fill="outline" style="width: 73px; margin-left: 7px;"';
+        '" fill="outline" slot="end" style="width: 73px; margin-left: 10px;"';
     if(track.userId === sessionStorage.getItem('userId')) {
         $('#sessionTrackList').append(
-            html + 'onclick="revokeMyTrack($(this));">Revoke</ion-button></ion-label></ion-item>'
+            html + 'onclick="revokeMyTrack($(this));">Revoke</ion-button></ion-item>'
         );
     } else {
         $('#sessionTrackList').append(
-            html + 'onclick="vote($(this));">Vote</ion-button></ion-label></ion-item>'
+            html + 'onclick="vote($(this));">Vote</ion-button></ion-item>'
         );
     }
 }
@@ -563,8 +590,45 @@ function onTrackRemove(track) {
 }
 
 function onTrackStart(track) {
-    // wip...
-    console.log(track);
+    let time = new Date().getTime() - track.startMs;
+    $('#currentTrackInfo').append(
+        '<ion-thumbnail slot="start"><img src="' +
+        track.imgUrl +
+        '"/></ion-thumbnail><ion-label style="min-width:' +
+        track.name.length * 9 + 'px; max-width:' +
+        track.name.length * 9 + 'px;">' +
+        track.name +
+        '</h2><p>' +
+        track.artist +
+        '</p></ion-label><ion-label class="ion-text-end ion-margin-end ion-hide-md-down"' +
+        'style="min-width: 40px;"><p id="currentTime" name="' + time + '">' +
+        msToTime(time) +
+        '</p></ion-label><ion-progress-bar class="ion-hide-md-down"></ion-progress-bar>' +
+        '<ion-label class="ion-margin-start" style="min-width: 40px;"><p>' +
+        msToTime(track.timeMs) +
+        '</p></ion-label>'
+    );
+    progress = time / track.timeMs;
+    rate = timeout / track.timeMs;
+    if(interval !== null) {
+        clearInterval(interval);
+    }
+    interval = setInterval(updateProgress, timeout);
+}
+
+function updateProgress() {
+    progress = progress + rate;
+    if(progress < 1) {
+        let time = parseInt($('#currentTime').attr('name')) + timeout;
+        $('#currentTime').attr('name', time);
+        $('#currentTime').text(msToTime(time));
+        $('ion-progress-bar').each(function() {
+            $(this).val(progress);
+        });
+    } else {
+        clearInterval(interval);
+        interval = null;
+    }
 }
 
 function revokeMyTrack(tag) {
@@ -601,7 +665,7 @@ customElements.define('modal-content-track', class ModalContent extends HTMLElem
         this.innerHTML = `
             <ion-header>
                 <ion-toolbar>
-                    <ion-title class="ion-text-center">Search Track</ion-title>
+                    <ion-title class="ion-text-center center-modal-title">Search Track</ion-title>
                     <ion-buttons slot="end">
                         <ion-button onclick="dismissTrackModal();">
                             <ion-icon name="close-outline"></ion-icon>
@@ -647,7 +711,7 @@ function onSearchTrack(name) {
                             "'" + response[i].imgUrl + "'," +
                             "'" + 'timeMs' + "'" + ':' +
                             response[i].timeMs +
-                        '});"><ion-thumbnail><img src="' +
+                        '}); dismissTrackModal();"><ion-thumbnail><img src="' +
                         response[i].imgUrl +
                         '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
                         response[i].name +
@@ -679,4 +743,9 @@ function onSelectTrack(track) {
             console.log(response);
         }
     });
+}
+
+function onLeaveSession() {
+    // wip...
+    console.log('leave');
 }
