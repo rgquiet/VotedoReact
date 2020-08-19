@@ -33,6 +33,13 @@ public class UserService {
         repo.save(user).subscribe();
     }
 
+    public Integer decVote(User user) {
+        Integer votes = user.getVotes() - 1;
+        user.setVotes(votes);
+        repo.save(user).subscribe();
+        return votes;
+    }
+
     public UserDTO userDTOMapper(User user) {
         return new UserDTO(
             user.getId(),

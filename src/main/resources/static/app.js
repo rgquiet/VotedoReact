@@ -1,12 +1,12 @@
 const home = 'http://localhost:8080/'; //'http://ec2-3-121-231-202.eu-central-1.compute.amazonaws.com:8080/'
 const api = home + 'api/';
-let currentModal = null;
-let userSse = null;
-let sessionSse = null;
-let interval = null;
-let timeout = 1000;
+const timeout = 1000;
 let progress = 0;
 let rate = 0;
+let interval = null;
+let userSse = null;
+let sessionSse = null;
+let currentModal = null;
 
 $(window).on('beforeunload', function() {
     if(userSse) {
@@ -51,10 +51,7 @@ function checkAccessToken() {
                 userSse = new EventSource(api + 'user/sub/' + response['id']);
                 userSse.onmessage = function(event) { onUserEvent(event); }
                 if(response['sessionId']) {
-                    $('#myVotes').empty().append(
-                        '<ion-icon name="hand-left-outline"></ion-icon>' +
-                        response['votes']
-                    );
+                    updateVotes(response['votes']);
                     alreadyInSession(response['sessionId']);
                 }
             }
@@ -156,7 +153,7 @@ function closeUserEvent(sessionId) {
 function acceptInvitation(tag) {
     let sessionId = tag.parent().attr('id');
     onJoinSession(sessionId);
-    closeUserEvent(sessionId)
+    closeUserEvent(sessionId);
     tag.parent().parent().remove();
 }
 
@@ -420,7 +417,7 @@ function onSearchFriend(name) {
                     $('#userList').append(
                         '<ion-item button onclick="onInviteFriend(' +
                         "'" + response[i].id + "'" +
-                        '); dismissFriendModal();"><ion-thumbnail><img src="' +
+                        ');"><ion-thumbnail><img src="' +
                         response[i].imgUrl +
                         '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
                         response[i].username +
@@ -511,10 +508,7 @@ function showSessionContent(session) {
     // Change header and footer
     $('#sessionTitle').text(session['name']);
     if(session['votes'] !== null) {
-        $('#myVotes').empty().append(
-            '<ion-icon name="hand-left-outline"></ion-icon>' +
-            session['votes']
-        );
+        updateVotes(session['votes']);
     }
     $('#votedo').addClass('ion-hide');
     $('#header-session').removeClass('ion-hide');
@@ -530,120 +524,15 @@ function showSessionContent(session) {
         url: api + 'session/getTracks/' + session['id'],
         contentType: 'application/json; charset=utf-8',
         success: function(response) {
+            // Sort tracks in descending order based on votes
+            response.sort(function(a, b) {
+                return parseInt(b.votes) - parseInt(a.votes);
+            });
             $.each(response, function(i) {
                 addToSessionTrackList(response[i]);
             });
         }
     });
-}
-
-function onSessionEvent(event) {
-    const response = JSON.parse(event.data);
-    switch(response['type']) {
-        case 'TRACKCREATE':
-            addToSessionTrackList(response['dto']);
-            break;
-        case 'TRACKREMOVE':
-            onTrackRemove(response['dto']);
-            break;
-        case 'TRACKSTART':
-            onTrackStart(response['dto']);
-            break;
-        case 'VOTENEW':
-            onVoteNew(response['dto']);
-            break;
-    }
-}
-
-function addToSessionTrackList(track) {
-    let time = msToTime(track.timeMs);
-    // wip: Don't allow same track multiple times in a session
-    let html =
-        '<ion-item><ion-thumbnail><img src="' +
-        track.imgUrl +
-        '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
-        track.name +
-        '</h2><p>' +
-        track.artist +
-        '</p></ion-label><ion-label class="ion-text-center ion-hide-md-down"><p>' +
-        time +
-        '</p></ion-label><ion-label class="ion-text-end">' +
-        '<ion-icon name="hand-left-outline"></ion-icon>' +
-        track.votes +
-        '</ion-label><ion-button id="' +
-        track.id +
-        '" fill="outline" slot="end" style="width: 73px; margin-left: 10px;"';
-    if(track.userId === sessionStorage.getItem('userId')) {
-        $('#sessionTrackList').append(
-            html + 'onclick="revokeMyTrack($(this));">Revoke</ion-button></ion-item>'
-        );
-    } else {
-        $('#sessionTrackList').append(
-            html + 'onclick="vote($(this));">Vote</ion-button></ion-item>'
-        );
-    }
-}
-
-function onTrackRemove(track) {
-    // wip...
-    console.log(track);
-}
-
-function onTrackStart(track) {
-    let time = new Date().getTime() - track.startMs;
-    $('#currentTrackInfo').append(
-        '<ion-thumbnail slot="start"><img src="' +
-        track.imgUrl +
-        '"/></ion-thumbnail><ion-label style="min-width:' +
-        track.name.length * 9 + 'px; max-width:' +
-        track.name.length * 9 + 'px;">' +
-        track.name +
-        '</h2><p>' +
-        track.artist +
-        '</p></ion-label><ion-label class="ion-text-end ion-margin-end ion-hide-md-down"' +
-        'style="min-width: 40px;"><p id="currentTime" name="' + time + '">' +
-        msToTime(time) +
-        '</p></ion-label><ion-progress-bar class="ion-hide-md-down"></ion-progress-bar>' +
-        '<ion-label class="ion-margin-start" style="min-width: 40px;"><p>' +
-        msToTime(track.timeMs) +
-        '</p></ion-label>'
-    );
-    progress = time / track.timeMs;
-    rate = timeout / track.timeMs;
-    if(interval !== null) {
-        clearInterval(interval);
-    }
-    interval = setInterval(updateProgress, timeout);
-}
-
-function updateProgress() {
-    progress = progress + rate;
-    if(progress < 1) {
-        let time = parseInt($('#currentTime').attr('name')) + timeout;
-        $('#currentTime').attr('name', time);
-        $('#currentTime').text(msToTime(time));
-        $('ion-progress-bar').each(function() {
-            $(this).val(progress);
-        });
-    } else {
-        clearInterval(interval);
-        interval = null;
-    }
-}
-
-function revokeMyTrack(tag) {
-    // wip...
-    console.log(tag.attr('id'));
-}
-
-function onVoteNew(vote) {
-    // wip...
-    console.log(vote);
-}
-
-function vote(tag) {
-    // wip...
-    console.log(tag.attr('id'));
 }
 
 async function createTrackModal() {
@@ -696,21 +585,21 @@ function onSearchTrack(name) {
             contentType: 'application/json; charset=utf-8',
             success: function(response) {
                 $('#trackList').empty();
-                    $.each(response, function(i) {
+                $.each(response, function(i) {
                     let time = msToTime(response[i].timeMs);
                     $('#trackList').append(
                         // wip: Error with artists and names containing '
                         '<ion-item button onclick="onSelectTrack({' +
-                            "'" + 'id' + "'" + ':' +
-                            "'" + response[i].id + "'," +
-                            "'" + 'name' + "'" + ':' +
-                            "'" + response[i].name + "'," +
-                            "'" + 'artist' + "'" + ':' +
-                            "'" + response[i].artist + "'," +
-                            "'" + 'imgUrl' + "'" + ':' +
-                            "'" + response[i].imgUrl + "'," +
-                            "'" + 'timeMs' + "'" + ':' +
-                            response[i].timeMs +
+                        "'" + 'id' + "'" + ':' +
+                        "'" + response[i].id + "'," +
+                        "'" + 'name' + "'" + ':' +
+                        "'" + response[i].name + "'," +
+                        "'" + 'artist' + "'" + ':' +
+                        "'" + response[i].artist + "'," +
+                        "'" + 'imgUrl' + "'" + ':' +
+                        "'" + response[i].imgUrl + "'," +
+                        "'" + 'timeMs' + "'" + ':' +
+                        response[i].timeMs +
                         '}); dismissTrackModal();"><ion-thumbnail><img src="' +
                         response[i].imgUrl +
                         '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
@@ -745,7 +634,178 @@ function onSelectTrack(track) {
     });
 }
 
+function updateVotes(votes) {
+    $('#myVotes').empty().append(
+        '<ion-icon name="hand-left-outline"></ion-icon>' +
+        votes
+    );
+}
+
+function incVotes() {
+    let votes = parseInt($('#myVotes').text());
+    updateVotes(votes + 1);
+}
+
 function onLeaveSession() {
     // wip...
     console.log('leave');
+}
+
+/* Event Handling */
+function onSessionEvent(event) {
+    const response = JSON.parse(event.data);
+    switch(response['type']) {
+        case 'TRACKCREATE':
+            addToSessionTrackList(response['dto']);
+            break;
+        case 'TRACKREMOVE':
+            onTrackRemove(response['dto']);
+            break;
+        case 'TRACKSTART':
+            onTrackStart(response['dto']);
+            incVotes();
+            break;
+        case 'VOTETRACK':
+            onVoteTrack(response['dto']);
+            break;
+        case 'VOTESTOP':
+            onVoteStop();
+            break;
+        case 'SESSIONSTOP':
+            onSessionStop(response['dto']);
+            break;
+    }
+}
+
+function addToSessionTrackList(track) {
+    let time = msToTime(track.timeMs);
+    // wip: Don't allow same track multiple times in a session
+    let html =
+        '<ion-item><ion-thumbnail><img src="' +
+        track.imgUrl +
+        '"/></ion-thumbnail><ion-label class="ion-margin-start"><h2>' +
+        track.name +
+        '</h2><p>' +
+        track.artist +
+        '</p></ion-label><ion-label class="ion-text-center ion-hide-md-down"><p>' +
+        time +
+        '</p></ion-label><ion-label class="trackVote ion-text-end">' +
+        '<ion-icon name="hand-left-outline"></ion-icon>' +
+        track.votes +
+        '</ion-label><ion-button id="' +
+        track.id +
+        '" fill="outline" slot="end" style="width: 73px; margin-left: 10px;"';
+    if(track.userId === sessionStorage.getItem('userId')) {
+        $('#sessionTrackList').append(
+            html + 'onclick="revokeMyTrack($(this));">Revoke</ion-button></ion-item>'
+        );
+    } else {
+        $('#sessionTrackList').append(
+            html + 'onclick="vote($(this));">Vote</ion-button></ion-item>'
+        );
+    }
+}
+
+function revokeMyTrack(tag) {
+    // wip...
+    console.log(tag.attr('id'));
+}
+
+function vote(tag) {
+    // wip: Alert if voting is not possible
+    $.ajax({
+        type: 'POST',
+        url: api + 'session/vote',
+        dataType: 'text',
+        contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify({
+            userId: sessionStorage.getItem('userId'),
+            trackId: tag.attr('id')
+        }),
+        statusCode: {
+            403: function(xhr) {
+                console.log(xhr['responseText']);
+            }
+        },
+        success: function(response) {
+            updateVotes(response);
+        }
+    });
+}
+
+function onTrackRemove(track) {
+    $('#' + track).parent().remove();
+}
+
+function onTrackStart(track) {
+    let time = new Date().getTime() - track.startMs;
+    $('#currentTrackInfo').empty().append(
+        '<ion-thumbnail slot="start"><img src="' +
+        track.imgUrl +
+        '"/></ion-thumbnail><ion-label style="min-width:' +
+        track.name.length * 8 + 'px; max-width:' +
+        track.name.length * 9 + 'px;">' +
+        track.name +
+        '</h2><p>' +
+        track.artist +
+        '</p></ion-label><ion-label class="ion-text-end ion-margin-end ion-hide-md-down"' +
+        'style="min-width: 40px;"><p id="currentTime" name="' + time + '">' +
+        msToTime(time) +
+        '</p></ion-label><ion-progress-bar class="ion-hide-md-down"></ion-progress-bar>' +
+        '<ion-label class="ion-margin-start" style="min-width: 40px;"><p>' +
+        msToTime(track.timeMs) +
+        '</p></ion-label>'
+    );
+    progress = time / track.timeMs;
+    rate = timeout / track.timeMs;
+    if(interval !== null) {
+        clearInterval(interval);
+    }
+    interval = setInterval(updateProgress, timeout);
+}
+
+function updateProgress() {
+    progress = progress + rate;
+    if(progress < 1) {
+        let time = parseInt($('#currentTime').attr('name')) + timeout;
+        $('#currentTime').attr('name', time);
+        $('#currentTime').text(msToTime(time));
+        $('ion-progress-bar').each(function() {
+            $(this).val(progress);
+        });
+    } else {
+        clearInterval(interval);
+        interval = null;
+    }
+}
+
+function onVoteTrack(track) {
+    let tag = $('#' + track['id']).parent();
+    tag.remove();
+    tag.children('.trackVote').empty().append(
+        '<ion-icon name="hand-left-outline"></ion-icon>' +
+        track['votes']
+    );
+    let insert = false;
+    $('#sessionTrackList').children().each(function() {
+        let vote = parseInt($(this).children('.trackVote').text());
+        if(track['votes'] >= vote) {
+            tag.insertBefore($(this));
+            insert = true;
+            return false;
+        }
+    });
+    if(!insert) {
+        $('#sessionTrackList').append(tag);
+    }
+}
+
+function onVoteStop() {
+    // wip...
+    console.log('VOTESTOP');
+}
+
+function onSessionStop(text) {
+    // wip...
+    console.log(text);
 }

@@ -4,7 +4,10 @@ import com.rgq.votedoreact.config.SessionEventPublisher;
 import com.rgq.votedoreact.dto.*;
 import com.rgq.votedoreact.model.Session;
 import com.rgq.votedoreact.model.Track;
+import com.rgq.votedoreact.model.Vote;
 import com.rgq.votedoreact.service.*;
+import com.rgq.votedoreact.sse.EventType;
+import com.rgq.votedoreact.sse.SessionSSE;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +19,7 @@ import reactor.core.publisher.Mono;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/session")
@@ -126,7 +130,7 @@ public class SessionController {
                         // Create a SSE publisher for the new session
                         eventService.getPublishers().put(session.getId(), new SessionEventPublisher());
                         // Add new session to the scheduling service
-                        // wip: schedulingService.getMonitoredSessions().add(session);
+                        schedulingService.getMonitoredSessions().put(session, null);
                         if(!open) {
                             for(int i = 0; i < createSessionDTO.getInvitations().length; i++) {
                                 service.sendInvitation(
@@ -141,6 +145,7 @@ public class SessionController {
                             session.getId(),
                             session.getName(),
                             user.getVotes(),
+                            // wip: NullPointer if device is a mobile
                             spotifyService.currentTrackDTOMapper(session.getCurrentTrack())
                         );
                     });
@@ -180,13 +185,39 @@ public class SessionController {
     }
 
     @PostMapping("/vote")
-    public void voteForTrack(@RequestBody VoteDTO voteDTO) {
-        userService.getById(voteDTO.getUserId())
+    public Mono<ResponseEntity<?>> voteForTrack(@RequestBody VoteDTO voteDTO) {
+        return userService.getById(voteDTO.getUserId())
             .map(user -> {
-                if(user.getVotes() > 0 && !Objects.equals(user.getTrackId(), voteDTO.getTrackId())) {
-                    // wip...
+                if(user.getVotes() > 0 && user.getSessionId() != null
+                && !Objects.equals(user.getTrackId(), voteDTO.getTrackId())) {
+                    service.getById(user.getSessionId())
+                        .subscribe(session -> {
+                            session.getVotes().add(new Vote(
+                                UUID.randomUUID(),
+                                user.getId(),
+                                voteDTO.getTrackId()
+                            ));
+                            service.save(session).subscribe(saved -> eventService
+                                .getPublishers()
+                                .get(saved.getId())
+                                .publishEvent(new SessionSSE(
+                                    EventType.VOTETRACK,
+                                    service.sessionTrackDTOMapper(
+                                        spotifyService.getTrackById(voteDTO.getTrackId()),
+                                        saved.getVotes(),
+                                        user.getId()
+                                    )
+                                ))
+                            );
+                        });
+                    return userService.decVote(user);
                 }
-                return Mono.just("Invalid vote");
+                return "Invalid vote";
+            }).map(response -> {
+                if(response.equals("Invalid vote")) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+                }
+                return ResponseEntity.ok(response);
             });
     }
 }
