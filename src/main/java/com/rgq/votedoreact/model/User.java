@@ -1,5 +1,6 @@
 package com.rgq.votedoreact.model;
 
+import com.wrapper.spotify.enums.ProductType;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -15,6 +16,7 @@ import java.util.List;
 public class User {
     @Id
     private String id;
+    private ProductType product;
     private String sessionId;
     private String trackId;
     private String username;

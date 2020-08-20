@@ -4,7 +4,7 @@ spotify:
     clientId: b07659c8338143f98ded7683fd1d13c5
     clientSecret: 0c1d77a5c68945a3af376f2bc57133f0
     redirectUri: http://localhost:8080 #http://ec2-3-121-231-202.eu-central-1.compute.amazonaws.com:8080
-    scopes: user-read-email%20user-read-playback-state%20streaming
+    scopes: user-read-private%20user-read-playback-state%20streaming
 
 spring:
   data:

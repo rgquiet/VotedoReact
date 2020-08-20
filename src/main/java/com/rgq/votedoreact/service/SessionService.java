@@ -1,6 +1,7 @@
 package com.rgq.votedoreact.service;
 
 import com.rgq.votedoreact.dto.*;
+import com.rgq.votedoreact.model.Track;
 import com.rgq.votedoreact.model.User;
 import com.rgq.votedoreact.model.Vote;
 import com.rgq.votedoreact.sse.EventType;
@@ -19,18 +20,18 @@ public class SessionService {
     private final SessionRepo repo;
     private final UserService userService;
     private final UserEventService userEventService;
-    private final SessionEventService sessionEventService;
+    private final SessionEventService eventService;
 
     public SessionService(
         SessionRepo repo,
         UserService userService,
         UserEventService userEventService,
-        SessionEventService sessionEventService
+        SessionEventService eventService
     ) {
         this.repo = repo;
         this.userService = userService;
         this.userEventService = userEventService;
-        this.sessionEventService = sessionEventService;
+        this.eventService = eventService;
     }
 
     public Mono<Session> save(Session session) {
@@ -46,18 +47,41 @@ public class SessionService {
         return repo.findAllByOpenAndNameLike(true, name).limitRequest(10);
     }
 
-    public void sendInvitation(String sessionId, String session, String username, String userId) {
+    public void sendSessionStopEvent(Session session, Integer timeMs) {
+        eventService.getPublishers().get(session.getId())
+            .publishEvent(new SessionSSE(
+                EventType.SESSIONSTOP,
+                new StopTrackDTO(
+                    session.getOwner().getId(),
+                    session.getCurrentTrack().getTrackInfos().getId(),
+                    timeMs
+                )
+            ));
+    }
+
+    public void sendSessionStopEvent(String sessionId, String text) {
+        eventService.getPublishers().get(sessionId)
+            .publishEvent(new SessionSSE(EventType.SESSIONSTOP, text));
+    }
+
+    public void sendInvitation(String sessionId, String sessionName, String username, String userId) {
         userEventService.saveOrUpdateEvent(
             new UserSSE(
                 sessionId,
                 true,
-                username + " invites you to his private session: " + session
+                username + " invites you to his private session: " + sessionName
             ),
             userId)
         .subscribe();
     }
 
+    public void sendTrackStartEvent(String sessionId, CurrentTrackDTO dto) {
+        eventService.getPublishers().get(sessionId)
+            .publishEvent(new SessionSSE(EventType.TRACKSTART, dto));
+    }
+
     public void removeTrackById(Session session, String trackId) {
+        System.out.println(">>> Track: " + trackId + " <<<");
         boolean check = false;
         if(session.getOwner().getTrackId() != null) {
             if(session.getOwner().getTrackId().equals(trackId)) {
@@ -70,8 +94,12 @@ public class SessionService {
             for(User user : session.getMembers()) {
                 if(user.getTrackId() != null) {
                     if(user.getTrackId().equals(trackId)) {
+                        System.out.println(">>> User: " + user.getTrackId() + " <<<");
                         user.setTrackId(null);
-                        userService.save(user).subscribe();
+                        userService.save(user).subscribe(saved -> {
+                            // wip...
+                            System.out.println(">>> Saved: " + saved.getTrackId() + " <<<");
+                        });
                         check = true;
                         break;
                     }
@@ -79,11 +107,39 @@ public class SessionService {
             }
         }
         if(check) {
-            sessionEventService.getPublishers().get(session.getId())
+            eventService.getPublishers().get(session.getId())
                 .publishEvent(new SessionSSE(
                     EventType.TRACKREMOVE, trackId
                 ));
         }
+    }
+
+    public Boolean trackAlreadyUsed(Session session, String trackId) {
+        if(session.getOwner().getTrackId() != null) {
+            if(session.getOwner().getTrackId().equals(trackId)) {
+                return true;
+            }
+        }
+        for(User user : session.getMembers()) {
+            if(user.getTrackId() != null) {
+                if(user.getTrackId().equals(trackId)) {
+                    return true;
+                }
+            }
+        }
+        if(session.getCurrentTrack().getTrackInfos().getId() != null) {
+            if(session.getCurrentTrack().getTrackInfos().getId().equals(trackId)) {
+                return true;
+            }
+        }
+        for(Track track : session.getPlayedTracks()) {
+            if(track.getTrackInfos().getId() != null) {
+                if(track.getTrackInfos().getId().equals(trackId)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public String evaluateNextTrack(Session session) {
@@ -97,14 +153,30 @@ public class SessionService {
         return winner.getKey();
     }
 
-    public List<Vote> cleanUpVotes(List<Vote> votes, String trackId) {
-        votes.removeIf(vote -> vote.getTrackId().equals(trackId));
-        return votes;
+    public String selectRandomTrack(Session session) {
+        if(session.getPlayedTracks().isEmpty()) {
+            return session.getCurrentTrack().getTrackInfos().getId();
+        }
+        int i = new Random().nextInt(session.getPlayedTracks().size());
+        return session.getPlayedTracks().get(i).getTrackInfos().getId();
+    }
+
+    public void sendVoteStopEvent(String sessionId) {
+        // wip: Put something other than null in dto
+        eventService.getPublishers().get(sessionId)
+            .publishEvent(new SessionSSE(
+                EventType.VOTESTOP, null
+            ));
     }
 
     public void distributeNewVotes(Session session) {
         userService.incVote(session.getOwner());
         session.getMembers().forEach(userService::incVote);
+    }
+
+    public List<Vote> cleanUpVotes(List<Vote> votes, String trackId) {
+        votes.removeIf(vote -> vote.getTrackId().equals(trackId));
+        return votes;
     }
 
     public SessionDTO sessionDTOMapper(Session session) {

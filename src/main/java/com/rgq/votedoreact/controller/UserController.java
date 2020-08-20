@@ -2,6 +2,7 @@ package com.rgq.votedoreact.controller;
 
 import com.rgq.votedoreact.dto.*;
 import com.rgq.votedoreact.service.SessionEventService;
+import com.rgq.votedoreact.service.SessionService;
 import com.rgq.votedoreact.sse.EventType;
 import com.rgq.votedoreact.sse.SessionSSE;
 import com.rgq.votedoreact.sse.UserSSE;
@@ -22,15 +23,18 @@ import java.util.List;
 public class UserController {
     private final UserService service;
     private final UserEventService eventService;
+    private final SessionService sessionService;
     private final SessionEventService sessionEventService;
 
     public UserController(
         UserService service,
         UserEventService eventService,
+        SessionService sessionService,
         SessionEventService sessionEventService
     ) {
         this.service = service;
         this.eventService = eventService;
+        this.sessionService = sessionService;
         this.sessionEventService = sessionEventService;
     }
 
@@ -65,7 +69,7 @@ public class UserController {
             .map(friend -> {
                 // Check if new friend is a user that exists
                 if(friend.getId() == null) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("no user with this id");
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No user with this id");
                 } else {
                     // Get user to save new friend
                     service.getById(createFriendDTO.getId())
@@ -90,26 +94,39 @@ public class UserController {
 
     @PostMapping("/track/{id}")
     public Mono<ResponseEntity<String>> setTrack(@PathVariable String id, @RequestBody TrackDTO trackDTO) {
-        return service.getById(id).map(user -> {
+        return service.getById(id).flatMap(user -> {
             if(user.getTrackId() == null) {
-                user.setTrackId(trackDTO.getId());
-            } else {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(user.getTrackId());
+                return sessionService.getById(user.getSessionId())
+                    .map(session -> {
+                        if(sessionService.trackAlreadyUsed(session, trackDTO.getId())) {
+                            return "Track already used";
+                        }
+                        user.setTrackId(trackDTO.getId());
+                        service.save(user).subscribe(saved -> sessionEventService
+                            .getPublishers()
+                            .get(saved.getSessionId())
+                            .publishEvent(new SessionSSE(
+                                EventType.TRACKCREATE,
+                                new SessionTrackDTO(
+                                    trackDTO.getId(),
+                                    saved.getId(),
+                                    trackDTO.getName(),
+                                    trackDTO.getArtist(),
+                                    trackDTO.getImgUrl(),
+                                    trackDTO.getTimeMs(),
+                                    0
+                                )
+                            ))
+                        );
+                        return trackDTO.getId();
+                    });
             }
-            SessionTrackDTO sessionTrack = new SessionTrackDTO(
-                trackDTO.getId(),
-                user.getId(),
-                trackDTO.getName(),
-                trackDTO.getArtist(),
-                trackDTO.getImgUrl(),
-                trackDTO.getTimeMs(),
-                0
-            );
-            service.save(user).subscribe(saved -> sessionEventService
-                .getPublishers()
-                .get(saved.getSessionId())
-                .publishEvent(new SessionSSE(EventType.TRACKCREATE, sessionTrack)));
-            return ResponseEntity.ok(trackDTO.getId() + " saved");
+            return Mono.just(user.getTrackId());
+        }).map(response -> {
+            if(response.equals(trackDTO.getId())) {
+                return ResponseEntity.ok(response);
+            }
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
         });
     }
 

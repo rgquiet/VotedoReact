@@ -3,29 +3,25 @@ package com.rgq.votedoreact.service;
 import com.rgq.votedoreact.model.Session;
 import com.rgq.votedoreact.model.Track;
 import com.rgq.votedoreact.repo.SessionRepo;
-import com.rgq.votedoreact.sse.EventType;
-import com.rgq.votedoreact.sse.SessionSSE;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
-import java.util.Random;
+import java.util.Iterator;
+import java.util.Map;
 
 @Service
 public class SchedulingService {
     private final SessionService service;
-    private final SessionEventService eventService;
     private final SpotifyService spotifyService;
     private final HashMap<Session, String> monitoredSessions;
 
     public SchedulingService(
         SessionRepo repo,
         SessionService service,
-        SessionEventService eventService,
         SpotifyService spotifyService
     ) {
         this.service = service;
-        this.eventService = eventService;
         this.spotifyService = spotifyService;
         this.monitoredSessions = new HashMap<>();
         repo.findAll().subscribe(session -> monitoredSessions.put(session, null));
@@ -37,71 +33,64 @@ public class SchedulingService {
 
     @Scheduled(fixedRate = 5000)
     private void checkPlaybackStatus() {
-        monitoredSessions.forEach((session, trackId) -> {
-            Track track = spotifyService.getPlaybackStatus(session.getOwner().getAccessToken());
+        for(Iterator<Map.Entry<Session, String>> it = monitoredSessions.entrySet().iterator(); it.hasNext();) {
+            final Map.Entry<Session, String> entry = it.next();
+            final Track track = spotifyService.getPlaybackStatus(entry.getKey().getOwner().getAccessToken());
             if(track != null) {
+                final String trackId = entry.getValue();
                 if(trackId != null) {
-                    service.getById(session.getId()).subscribe(update -> {
-                        // Update session and alert all user about next track
+                    //System.out.println(">>> Value: " + entry.getValue() + " <<<");
+                    // Update session and alert all user about next track
+                    service.getById(entry.getKey().getId()).subscribe(update -> {
                         service.removeTrackById(update, trackId);
                         update.setVotes(service.cleanUpVotes(update.getVotes(), trackId));
                         update.getPlayedTracks().add(update.getCurrentTrack());
                         update.setCurrentTrack(track);
                         service.save(update).subscribe();
                     });
-                    service.distributeNewVotes(session);
-                    eventService.getPublishers().get(session.getId())
-                        .publishEvent(new SessionSSE(
-                            EventType.TRACKSTART, spotifyService.currentTrackDTOMapper(track)
-                        ));
-                    session.setCurrentTrack(track);
-                    monitoredSessions.put(session, null);
+                    service.sendTrackStartEvent(
+                        entry.getKey().getId(),
+                        spotifyService.currentTrackDTOMapper(track)
+                    );
+                    entry.getKey().setCurrentTrack(track);
+                    monitoredSessions.put(entry.getKey(), null);
                 } else {
-                    Long timestamp1 = session.getCurrentTrack().getTimestamp() - session.getCurrentTrack().getProgressMs();
                     Long timestamp2 = track.getTimestamp() - track.getProgressMs();
-                    if(timestamp2 - timestamp1 < 2000 &&
-                    session.getCurrentTrack().getTrackInfos().getId().equals(track.getTrackInfos().getId())) {
+                    Long timestamp1 = entry.getKey().getCurrentTrack().getTimestamp() -
+                                      entry.getKey().getCurrentTrack().getProgressMs();
+                    System.out.println(">>> td: " + (timestamp2-timestamp1) + " <<<");
+                    if(timestamp2 - timestamp1 < 2000 && timestamp2 - timestamp1 > -500 &&
+                    entry.getKey().getCurrentTrack().getTrackInfos().getId().equals(track.getTrackInfos().getId())) {
                         if(track.getTrackInfos().getTimeMs() - track.getProgressMs() < 5000) {
+                            service.sendVoteStopEvent(entry.getKey().getId());
                             // Selects next track for this session
-                            eventService.getPublishers().get(session.getId())
-                                .publishEvent(new SessionSSE(
-                                    EventType.VOTESTOP, null
-                                ));
-                            service.getById(session.getId())
+                            service.getById(entry.getKey().getId())
                                 .subscribe(update -> {
                                     String nextTrackId = service.evaluateNextTrack(update);
                                     if(nextTrackId == null) {
-                                        if(update.getPlayedTracks().isEmpty()) {
-                                            nextTrackId = update.getCurrentTrack().getTrackInfos().getId();
-                                        } else {
-                                            // Takes a random played track, because nobody vote for a new one
-                                            int i = new Random().nextInt(update.getPlayedTracks().size());
-                                            nextTrackId = update.getPlayedTracks().get(i).getTrackInfos().getId();
-                                        }
+                                        nextTrackId = service.selectRandomTrack(update);
                                     }
                                     spotifyService.addTrackToQueue(
                                         update.getOwner().getAccessToken(),
                                         update.getDeviceId(),
                                         nextTrackId
                                     );
+                                    service.distributeNewVotes(update);
                                     monitoredSessions.put(update, nextTrackId);
-                                    monitoredSessions.remove(session);
+                                    monitoredSessions.remove(entry.getKey());
                                 });
                         }
                     } else {
-                        eventService.getPublishers().get(session.getId())
-                            .publishEvent(new SessionSSE(
-                                EventType.SESSIONSTOP,
-                                track.getTrackInfos().getName() + ": " + (timestamp2 - timestamp1)
-                            ));
+                        // Owner controls spotify outside of this app
+                        long timeMs = track.getTimestamp() - timestamp1;
+                        service.sendSessionStopEvent(entry.getKey(), (int)timeMs);
+                        it.remove();
                     }
                 }
             } else {
-                eventService.getPublishers().get(session.getId())
-                    .publishEvent(new SessionSSE(
-                        EventType.SESSIONSTOP, "session null"
-                    ));
+                // wip: Handle playback stopped, changed device, toke expired
+                service.sendSessionStopEvent(entry.getKey().getId(), "Received null");
             }
-        });
+        }
     }
 }

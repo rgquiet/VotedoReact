@@ -8,6 +8,7 @@ import com.rgq.votedoreact.model.Vote;
 import com.rgq.votedoreact.service.*;
 import com.rgq.votedoreact.sse.EventType;
 import com.rgq.votedoreact.sse.SessionSSE;
+import com.wrapper.spotify.enums.ProductType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -75,6 +76,29 @@ public class SessionController {
         System.out.println(">>> userId: " + id + " <<<");
     }
 
+    @PostMapping("/restart")
+    public void restartSession(@RequestBody StopTrackDTO stopTrackDTO) {
+        userService.getById(stopTrackDTO.getOwnerId())
+            .subscribe(owner -> service.getById(owner.getSessionId())
+                .subscribe(session -> {
+                    spotifyService.restartPlaybackOnDevice(
+                        owner.getAccessToken(),
+                        session.getDeviceId(),
+                        stopTrackDTO.getTrackId(),
+                        stopTrackDTO.getProgressMs()
+                    );
+                    final Track track = spotifyService.getPlaybackStatus(owner.getAccessToken());
+                    track.setTimestamp(track.getTimestamp() - stopTrackDTO.getProgressMs());
+                    service.sendTrackStartEvent(session.getId(), spotifyService.currentTrackDTOMapper(track));
+                    session.setCurrentTrack(track);
+                    // Add new session to the scheduling service
+                    service.save(session)
+                        .subscribe(saved -> schedulingService.getMonitoredSessions().put(saved, null));
+
+            })
+        );
+    }
+
     @PostMapping("/join")
     public Mono<ResponseEntity<?>> joinSession(@RequestBody UserDTO userDTO) {
         return userService.getById(userDTO.getId())
@@ -110,45 +134,48 @@ public class SessionController {
         return userService.getById(createSessionDTO.getUserId())
             .flatMap(user -> {
                 if(user.getSessionId() == null) {
-                    spotifyService.startPlaybackOnDevice(user.getAccessToken(), createSessionDTO.getDeviceId());
-                    final Track track = spotifyService.getPlaybackStatus(user.getAccessToken());
-                    final Boolean open = (createSessionDTO.getInvitations() == null);
-                    return service.save(new Session(
-                        null,
-                        createSessionDTO.getDeviceId(),
-                        createSessionDTO.getName(),
-                        open,
-                        user,
-                        new ArrayList<>(),
-                        track,
-                        new ArrayList<>(),
-                        new ArrayList<>()
-                    )).map(session -> {
-                        user.setVotes(1);
-                        user.setSessionId(session.getId());
-                        userService.save(user).subscribe();
-                        // Create a SSE publisher for the new session
-                        eventService.getPublishers().put(session.getId(), new SessionEventPublisher());
-                        // Add new session to the scheduling service
-                        schedulingService.getMonitoredSessions().put(session, null);
-                        if(!open) {
-                            for(int i = 0; i < createSessionDTO.getInvitations().length; i++) {
-                                service.sendInvitation(
-                                    session.getId(),
-                                    session.getName(),
-                                    user.getUsername(),
-                                    createSessionDTO.getInvitations()[i]
-                                );
+                    if(user.getProduct() == ProductType.PREMIUM) {
+                        spotifyService.startPlaybackOnDevice(user.getAccessToken(), createSessionDTO.getDeviceId());
+                        final Track track = spotifyService.getPlaybackStatus(user.getAccessToken());
+                        final Boolean open = (createSessionDTO.getInvitations() == null);
+                        return service.save(new Session(
+                            null,
+                            createSessionDTO.getDeviceId(),
+                            createSessionDTO.getName(),
+                            open,
+                            user,
+                            new ArrayList<>(),
+                            track,
+                            new ArrayList<>(),
+                            new ArrayList<>()
+                        )).map(session -> {
+                            user.setVotes(1);
+                            user.setSessionId(session.getId());
+                            userService.save(user).subscribe();
+                            // Create a SSE publisher for the new session
+                            eventService.getPublishers().put(session.getId(), new SessionEventPublisher());
+                            // Add new session to the scheduling service
+                            schedulingService.getMonitoredSessions().put(session, null);
+                            if(!open) {
+                                for(int i = 0; i < createSessionDTO.getInvitations().length; i++) {
+                                    service.sendInvitation(
+                                        session.getId(),
+                                        session.getName(),
+                                        user.getUsername(),
+                                        createSessionDTO.getInvitations()[i]
+                                    );
+                                }
                             }
-                        }
-                        return new JoinSessionDTO(
-                            session.getId(),
-                            session.getName(),
-                            user.getVotes(),
-                            // wip: NullPointer if device is a mobile
-                            spotifyService.currentTrackDTOMapper(session.getCurrentTrack())
-                        );
-                    });
+                            return new JoinSessionDTO(
+                                session.getId(),
+                                session.getName(),
+                                user.getVotes(),
+                                // wip: NullPointer if device is a mobile
+                                spotifyService.currentTrackDTOMapper(session.getCurrentTrack())
+                            );
+                        });
+                    }
+                    return Mono.just("Premium needed");
                 }
                 // User already in a session
                 return Mono.just(user.getSessionId());

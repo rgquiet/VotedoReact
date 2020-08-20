@@ -217,9 +217,7 @@ function onJoinSession(sessionId) {
                 sessionId: sessionId
             }),
             statusCode: {
-                403: function(xhr) {
-                    console.log(xhr['responseText']);
-                    // wip...
+                403: function() {
                     showAlert('Attention', 'You are already in a session', ['OK']);
                 }
             },
@@ -229,7 +227,15 @@ function onJoinSession(sessionId) {
             }
         });
     } else {
-        showAlert('Attention', 'Please sign in to join a session', ['OK']);
+        showAlert('Attention', 'Please sign in to join a session', [
+            {
+                text: 'Cancel',
+                role: 'cancel',
+            }, {
+                text: 'Sign in',
+                handler: () => { implicitGrantFlow('home'); }
+            }
+        ]);
     }
 }
 
@@ -351,9 +357,11 @@ function onCreateSession() {
         }),
         statusCode: {
             403: function(xhr) {
-                console.log(xhr['responseText']);
-                // wip...
-                showAlert('Attention', 'You are already in a session', ['OK']);
+                if(xhr['responseText'] === 'Premium needed') {
+                    showAlert('Attention', 'You must have spotify premium to open a session', ['OK']);
+                } else {
+                    showAlert('Attention', 'You are already in a session', ['OK']);
+                }
             }
         },
         success: function(response) {
@@ -588,14 +596,13 @@ function onSearchTrack(name) {
                 $.each(response, function(i) {
                     let time = msToTime(response[i].timeMs);
                     $('#trackList').append(
-                        // wip: Error with artists and names containing '
                         '<ion-item button onclick="onSelectTrack({' +
                         "'" + 'id' + "'" + ':' +
                         "'" + response[i].id + "'," +
                         "'" + 'name' + "'" + ':' +
-                        "'" + response[i].name + "'," +
+                        "'" + response[i].name.replace("'", "") + "'," +
                         "'" + 'artist' + "'" + ':' +
-                        "'" + response[i].artist + "'," +
+                        "'" + response[i].artist.replace("'", "") + "'," +
                         "'" + 'imgUrl' + "'" + ':' +
                         "'" + response[i].imgUrl + "'," +
                         "'" + 'timeMs' + "'" + ':' +
@@ -625,7 +632,11 @@ function onSelectTrack(track) {
         data: JSON.stringify(track),
         statusCode: {
             403: function(xhr) {
-                console.log(xhr['responseText']);
+                if(xhr['responseText'] === 'Track already used') {
+                    showAlert('Attention', 'This track was already chosen in this session', ['OK']);
+                } else {
+                    showAlert('Attention', 'You can only choose one track at a time', ['OK']);
+                }
             }
         },
         success: function(response) {
@@ -646,6 +657,20 @@ function incVotes() {
     updateVotes(votes + 1);
 }
 
+function onFlameHost() {
+    // wip...
+    console.log('Fuck you host!');
+}
+
+function onRestartSession(stop) {
+    $.ajax({
+        type: 'POST',
+        url: api + 'session/restart',
+        contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify(stop)
+    });
+}
+
 function onLeaveSession() {
     // wip...
     console.log('leave');
@@ -663,13 +688,13 @@ function onSessionEvent(event) {
             break;
         case 'TRACKSTART':
             onTrackStart(response['dto']);
-            incVotes();
             break;
         case 'VOTETRACK':
             onVoteTrack(response['dto']);
             break;
         case 'VOTESTOP':
             onVoteStop();
+            incVotes();
             break;
         case 'SESSIONSTOP':
             onSessionStop(response['dto']);
@@ -679,7 +704,6 @@ function onSessionEvent(event) {
 
 function addToSessionTrackList(track) {
     let time = msToTime(track.timeMs);
-    // wip: Don't allow same track multiple times in a session
     let html =
         '<ion-item><ion-thumbnail><img src="' +
         track.imgUrl +
@@ -805,7 +829,28 @@ function onVoteStop() {
     console.log('VOTESTOP');
 }
 
-function onSessionStop(text) {
-    // wip...
-    console.log(text);
+function onSessionStop(stop) {
+    if(stop.ownerId === sessionStorage.getItem('userId')) {
+        showAlert('Session stopped', 'You cheated!', [
+            {
+                text: 'Leave',
+                role: 'cancel',
+                handler: () => { onLeaveSession(); }
+            }, {
+                text: 'Continue',
+                handler: () => { onRestartSession(stop); }
+            }
+        ]);
+    } else {
+        showAlert('Attention', 'The host stopped this session', [
+            {
+                text: 'Leave',
+                role: 'cancel',
+                handler: () => { onLeaveSession(); }
+            }, {
+                text: 'Flame host',
+                handler: () => { onFlameHost(); }
+            }
+        ]);
+    }
 }

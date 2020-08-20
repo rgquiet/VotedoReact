@@ -1,5 +1,6 @@
 package com.rgq.votedoreact.service;
 
+import com.google.gson.JsonParser;
 import com.rgq.votedoreact.config.SpotifyAuthConfig;
 import com.rgq.votedoreact.dto.AccessDTO;
 import com.rgq.votedoreact.dto.CurrentTrackDTO;
@@ -76,9 +77,9 @@ public class SpotifyService {
         try {
             final CompletableFuture<User> future = userRequest.executeAsync();
             return future.thenApply(userProfile -> {
-                // wip: Only premium users are allowed to create a session
                 com.rgq.votedoreact.model.User user = new com.rgq.votedoreact.model.User(
                     userProfile.getId(),
+                    userProfile.getProduct(),
                     null,
                     null,
                     userProfile.getDisplayName(),
@@ -201,6 +202,21 @@ public class SpotifyService {
             // Start playback with the default track 'Twisted Fate'
             .context_uri("spotify:album:1M6lrKUjfIiMpitc0xeh3x")
             .device_id(deviceId)
+            .build();
+        try {
+            startPlaybackRequest.executeAsync().get();
+        } catch(InterruptedException | ExecutionException e) {
+            logger.error("Error occurred: ", e);
+        }
+    }
+
+    public void restartPlaybackOnDevice(String accessToken, String deviceId, String trackId, Integer startMs) {
+        SpotifyApi api = new SpotifyApi.Builder().setAccessToken(accessToken).build();
+        StartResumeUsersPlaybackRequest startPlaybackRequest = api
+            .startResumeUsersPlayback()
+            .device_id(deviceId)
+            .uris(JsonParser.parseString("[\"spotify:track:" + trackId + "\"]").getAsJsonArray())
+            .position_ms(startMs)
             .build();
         try {
             startPlaybackRequest.executeAsync().get();
