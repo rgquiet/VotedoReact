@@ -5,6 +5,8 @@ public enum EventType {
     TRACKREMOVE,
     TRACKSTART,
     VOTETRACK,
+    VOTEUPDATE,
     VOTESTOP,
-    SESSIONSTOP
+    SESSIONSTOP,
+    SESSIONCLOSE
 }

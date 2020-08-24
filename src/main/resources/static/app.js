@@ -7,6 +7,7 @@ let interval = null;
 let userSse = null;
 let sessionSse = null;
 let currentModal = null;
+let currentAlert = null;
 
 $(window).on('beforeunload', function() {
     if(userSse) {
@@ -170,6 +171,13 @@ async function showAlert(header, message, buttons) {
         buttons: buttons
     });
     await alert.present();
+    currentAlert = alert;
+}
+
+function dismissAlert() {
+    if(currentAlert) {
+        currentAlert.dismiss().then(() => { currentAlert = null; });
+    }
 }
 
 /* Page: 'home' */
@@ -217,8 +225,14 @@ function onJoinSession(sessionId) {
                 sessionId: sessionId
             }),
             statusCode: {
-                403: function() {
-                    showAlert('Attention', 'You are already in a session', ['OK']);
+                403: function(xhr) {
+                    console.log(xhr['responseText']);
+                    if(xhr['responseText'] === 'Session closed') {
+                        onPublicSession('');
+                        showAlert('Attention', 'This session has already been closed', ['OK']);
+                    } else {
+                        showAlert('Attention', 'You are already in a session', ['OK']);
+                    }
                 }
             },
             success: function(response) {
@@ -421,7 +435,7 @@ function onSearchFriend(name) {
         success: function(response) {
             $('#userList').empty();
             $.each(response, function(i) {
-                if(sessionStorage.getItem('userId') !== response[i].id) {
+                if(response[i].id !== sessionStorage.getItem('userId')) {
                     $('#userList').append(
                         '<ion-item button onclick="onInviteFriend(' +
                         "'" + response[i].id + "'" +
@@ -532,6 +546,7 @@ function showSessionContent(session) {
         url: api + 'session/getTracks/' + session['id'],
         contentType: 'application/json; charset=utf-8',
         success: function(response) {
+            $('#sessionTrackList').empty();
             // Sort tracks in descending order based on votes
             response.sort(function(a, b) {
                 return parseInt(b.votes) - parseInt(a.votes);
@@ -541,6 +556,16 @@ function showSessionContent(session) {
             });
         }
     });
+}
+
+function hideSessionContent() {
+    // Change header and footer
+    $('#votedo').removeClass('ion-hide');
+    $('#header-session').addClass('ion-hide');
+    if($('#bar-session').hasClass('toggle')) {
+        toggleFooter();
+    }
+    $('[name="toggleUp"]').addClass('ion-hide');
 }
 
 async function createTrackModal() {
@@ -672,8 +697,16 @@ function onRestartSession(stop) {
 }
 
 function onLeaveSession() {
-    // wip...
-    console.log('leave');
+    sessionSse.close();
+    $.ajax({
+        type: 'POST',
+        url: api + 'session/leave/' + sessionStorage.getItem('userId'),
+        contentType: 'application/json; charset=utf-8',
+        success: function() {
+            hideSessionContent();
+            showMe('home');
+        }
+    });
 }
 
 /* Event Handling */
@@ -687,17 +720,31 @@ function onSessionEvent(event) {
             onTrackRemove(response['dto']);
             break;
         case 'TRACKSTART':
+            dismissAlert();
             onTrackStart(response['dto']);
+            $('#sessionTrackList ion-button').each(function() {
+                $(this).prop('disabled', false);
+            });
             break;
         case 'VOTETRACK':
             onVoteTrack(response['dto']);
             break;
+        case 'VOTEUPDATE':
+            if(response['dto'].id === sessionStorage.getItem('userId')) {
+                updateVotes(response['dto'].votes);
+            }
+            break;
         case 'VOTESTOP':
-            onVoteStop();
+            $('#sessionTrackList ion-button').each(function() {
+                $(this).prop('disabled', true);
+            });
             incVotes();
             break;
         case 'SESSIONSTOP':
             onSessionStop(response['dto']);
+            break;
+        case 'SESSIONCLOSE':
+            onSessionClose(response['dto']);
             break;
     }
 }
@@ -731,30 +778,50 @@ function addToSessionTrackList(track) {
 }
 
 function revokeMyTrack(tag) {
-    // wip...
-    console.log(tag.attr('id'));
+    showAlert('Attention', 'Do you really want to revoke your track?', [
+        {
+            text: 'Yes',
+            handler: () => {
+                $.ajax({
+                    type: 'POST',
+                    url: api + 'session/revokeTrack',
+                    contentType: 'application/json; charset=utf-8',
+                    data: JSON.stringify({
+                        userId: sessionStorage.getItem('userId'),
+                        trackId: tag.attr('id')
+                    })
+                });
+            }
+        }, {
+            text: 'No',
+            role: 'cancel'
+        }
+    ]);
 }
 
 function vote(tag) {
-    // wip: Alert if voting is not possible
-    $.ajax({
-        type: 'POST',
-        url: api + 'session/vote',
-        dataType: 'text',
-        contentType: 'application/json; charset=utf-8',
-        data: JSON.stringify({
-            userId: sessionStorage.getItem('userId'),
-            trackId: tag.attr('id')
-        }),
-        statusCode: {
-            403: function(xhr) {
-                console.log(xhr['responseText']);
+    if(parseInt($('#myVotes').text()) === 0) {
+        showAlert('Attention', 'You have no votes left', ['OK'])
+    } else {
+        $.ajax({
+            type: 'POST',
+            url: api + 'session/vote',
+            dataType: 'text',
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify({
+                userId: sessionStorage.getItem('userId'),
+                trackId: tag.attr('id')
+            }),
+            statusCode: {
+                403: function(xhr) {
+                    console.log(xhr['responseText']);
+                }
+            },
+            success: function(response) {
+                updateVotes(response);
             }
-        },
-        success: function(response) {
-            updateVotes(response);
-        }
-    });
+        });
+    }
 }
 
 function onTrackRemove(track) {
@@ -824,11 +891,6 @@ function onVoteTrack(track) {
     }
 }
 
-function onVoteStop() {
-    // wip...
-    console.log('VOTESTOP');
-}
-
 function onSessionStop(stop) {
     if(stop.ownerId === sessionStorage.getItem('userId')) {
         showAlert('Session stopped', 'You cheated!', [
@@ -842,7 +904,7 @@ function onSessionStop(stop) {
             }
         ]);
     } else {
-        showAlert('Attention', 'The host stopped this session', [
+        showAlert('Attention', stop.sessionName + ' was stopped by the host', [
             {
                 text: 'Leave',
                 role: 'cancel',
@@ -853,4 +915,15 @@ function onSessionStop(stop) {
             }
         ]);
     }
+    if(interval !== null) {
+        clearInterval(interval);
+        interval = null;
+    }
+}
+
+function onSessionClose(name) {
+    sessionSse.close();
+    hideSessionContent();
+    showMe('home');
+    showAlert('Attention', name + ' was closed by the host', ['OK']);
 }

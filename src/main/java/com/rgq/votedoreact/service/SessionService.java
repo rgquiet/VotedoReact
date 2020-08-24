@@ -47,21 +47,37 @@ public class SessionService {
         return repo.findAllByOpenAndNameLike(true, name).limitRequest(10);
     }
 
+    public void closeSession(Session session) {
+        User owner = session.getOwner();
+        owner.setSessionId(null);
+        owner.setTrackId(null);
+        owner.setVotes(0);
+        userService.save(owner).subscribe();
+        session.getMembers().forEach(user -> {
+            user.setSessionId(null);
+            owner.setTrackId(null);
+            owner.setVotes(0);
+            userService.save(user).subscribe();
+        });
+        eventService.getPublishers().get(session.getId())
+            .publishEvent(new SessionSSE(
+                EventType.SESSIONCLOSE, session.getName()
+            ));
+        eventService.getPublishers().remove(session.getId());
+        repo.delete(session).subscribe();
+    }
+
     public void sendSessionStopEvent(Session session, Integer timeMs) {
         eventService.getPublishers().get(session.getId())
             .publishEvent(new SessionSSE(
                 EventType.SESSIONSTOP,
                 new StopTrackDTO(
+                    session.getName(),
                     session.getOwner().getId(),
                     session.getCurrentTrack().getTrackInfos().getId(),
                     timeMs
                 )
             ));
-    }
-
-    public void sendSessionStopEvent(String sessionId, String text) {
-        eventService.getPublishers().get(sessionId)
-            .publishEvent(new SessionSSE(EventType.SESSIONSTOP, text));
     }
 
     public void sendInvitation(String sessionId, String sessionName, String username, String userId) {
@@ -75,13 +91,22 @@ public class SessionService {
         .subscribe();
     }
 
+    public void sendTrackCreateEvent(String sessionId, SessionTrackDTO dto) {
+        eventService.getPublishers().get(sessionId)
+            .publishEvent(new SessionSSE(EventType.TRACKCREATE, dto));
+    }
+
+    public void sendTrackRemoveEvent(String sessionId, String trackId) {
+        eventService.getPublishers().get(sessionId)
+            .publishEvent(new SessionSSE(EventType.TRACKREMOVE, trackId));
+    }
+
     public void sendTrackStartEvent(String sessionId, CurrentTrackDTO dto) {
         eventService.getPublishers().get(sessionId)
             .publishEvent(new SessionSSE(EventType.TRACKSTART, dto));
     }
 
     public void removeTrackById(Session session, String trackId) {
-        System.out.println(">>> Track: " + trackId + " <<<");
         boolean check = false;
         if(session.getOwner().getTrackId() != null) {
             if(session.getOwner().getTrackId().equals(trackId)) {
@@ -94,24 +119,15 @@ public class SessionService {
             for(User user : session.getMembers()) {
                 if(user.getTrackId() != null) {
                     if(user.getTrackId().equals(trackId)) {
-                        System.out.println(">>> User: " + user.getTrackId() + " <<<");
                         user.setTrackId(null);
-                        userService.save(user).subscribe(saved -> {
-                            // wip...
-                            System.out.println(">>> Saved: " + saved.getTrackId() + " <<<");
-                        });
+                        userService.save(user).subscribe();
                         check = true;
                         break;
                     }
                 }
             }
         }
-        if(check) {
-            eventService.getPublishers().get(session.getId())
-                .publishEvent(new SessionSSE(
-                    EventType.TRACKREMOVE, trackId
-                ));
-        }
+        if(check) { sendTrackRemoveEvent(session.getId(), trackId); }
     }
 
     public Boolean trackAlreadyUsed(Session session, String trackId) {
@@ -161,12 +177,14 @@ public class SessionService {
         return session.getPlayedTracks().get(i).getTrackInfos().getId();
     }
 
-    public void sendVoteStopEvent(String sessionId) {
-        // wip: Put something other than null in dto
+    public void sendVoteTrackEvent(String sessionId, SessionTrackDTO dto) {
         eventService.getPublishers().get(sessionId)
-            .publishEvent(new SessionSSE(
-                EventType.VOTESTOP, null
-            ));
+            .publishEvent(new SessionSSE(EventType.VOTETRACK, dto));
+    }
+
+    public void sendVoteStopEvent(String sessionId) {
+        eventService.getPublishers().get(sessionId)
+            .publishEvent(new SessionSSE(EventType.VOTESTOP, null));
     }
 
     public void distributeNewVotes(Session session) {
@@ -174,9 +192,35 @@ public class SessionService {
         session.getMembers().forEach(userService::incVote);
     }
 
-    public List<Vote> cleanUpVotes(List<Vote> votes, String trackId) {
-        votes.removeIf(vote -> vote.getTrackId().equals(trackId));
-        return votes;
+    public void returnVotesByTrack(Session session, String trackId) {
+        HashMap<String, Integer> credit = new HashMap<>();
+        session.getVotes().forEach(vote -> {
+            if(vote.getTrackId().equals(trackId)) {
+                if(credit.containsKey(vote.getUserId())) {
+                    credit.put(vote.getUserId(), credit.get(vote.getUserId()) + 1);
+                } else {
+                    credit.put(vote.getUserId(), 1);
+                }
+            }
+        });
+        credit.forEach((userId, votes) ->
+            userService.getById(userId).subscribe(update -> {
+                update.setVotes(update.getVotes() + votes);
+                userService.save(update)
+                    .subscribe(saved -> eventService.getPublishers().get(saved.getSessionId())
+                        .publishEvent(new SessionSSE(
+                            EventType.VOTEUPDATE,
+                            new UserDTO(
+                                saved.getId(),
+                                saved.getSessionId(),
+                                saved.getUsername(),
+                                saved.getImgUrl(),
+                                saved.getVotes()
+                            )
+                        ))
+                    );
+            })
+        );
     }
 
     public SessionDTO sessionDTOMapper(Session session) {

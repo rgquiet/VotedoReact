@@ -226,6 +226,7 @@ public class SpotifyService {
     }
 
     public void addTrackToQueue(String accessToken, String deviceId, String trackId) {
+        // wip: Session crash if track adds to late to queue (previous track ended)
         SpotifyApi api = new SpotifyApi.Builder().setAccessToken(accessToken).build();
         AddItemToUsersPlaybackQueueRequest queueRequest = api
             .addItemToUsersPlaybackQueue("spotify:track:" + trackId)

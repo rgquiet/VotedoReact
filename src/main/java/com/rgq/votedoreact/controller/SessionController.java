@@ -6,8 +6,6 @@ import com.rgq.votedoreact.model.Session;
 import com.rgq.votedoreact.model.Track;
 import com.rgq.votedoreact.model.Vote;
 import com.rgq.votedoreact.service.*;
-import com.rgq.votedoreact.sse.EventType;
-import com.rgq.votedoreact.sse.SessionSSE;
 import com.wrapper.spotify.enums.ProductType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -17,10 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/session")
@@ -71,9 +66,33 @@ public class SessionController {
     }
 
     @PostMapping("/leave/{id}")
-    public void leaveSession(@PathVariable String id) {
-        // wip: Get user with id and check if he's the owner
-        System.out.println(">>> userId: " + id + " <<<");
+    public Mono<ResponseEntity<String>> leaveSession(@PathVariable String id) {
+        return userService.getById(id)
+            .flatMap(user -> service.getById(user.getSessionId())
+                .map(session -> {
+                    if(session.getOwner().getId().equals(id)) {
+                        schedulingService.removeMonitoredSession(session.getId());
+                        service.closeSession(session);
+                    } else {
+                        // Clean up session
+                        service.returnVotesByTrack(session, user.getTrackId());
+                        session.getVotes().removeIf(vote ->
+                            // wip: Update any track this user votes for
+                            vote.getUserId().equals(user.getId()) ||
+                            vote.getTrackId().equals(user.getTrackId())
+                        );
+                        session.getMembers().removeIf(member -> member.getId().equals(user.getId()));
+                        service.save(session).subscribe();
+                        // Clean up user
+                        service.sendTrackRemoveEvent(user.getSessionId(), user.getTrackId());
+                        user.setSessionId(null);
+                        user.setTrackId(null);
+                        user.setVotes(0);
+                        userService.save(user).subscribe();
+                    }
+                    return "Session leaved";
+                })
+            ).map(ResponseEntity::ok);
     }
 
     @PostMapping("/restart")
@@ -94,33 +113,38 @@ public class SessionController {
                     // Add new session to the scheduling service
                     service.save(session)
                         .subscribe(saved -> schedulingService.getMonitoredSessions().put(saved, null));
-
             })
         );
     }
 
     @PostMapping("/join")
     public Mono<ResponseEntity<?>> joinSession(@RequestBody UserDTO userDTO) {
-        return userService.getById(userDTO.getId())
-            .flatMap(user -> {
-                if(user.getSessionId() == null) {
-                    user.setVotes(1);
-                    user.setSessionId(userDTO.getSessionId());
-                    return userService.save(user)
-                        .flatMap(savedUser -> service.getById(savedUser.getSessionId()))
-                        .map(session -> {
-                            session.getMembers().add(user);
-                            service.save(session).subscribe();
-                            return new JoinSessionDTO(
-                                session.getId(),
-                                session.getName(),
-                                user.getVotes(),
-                                spotifyService.currentTrackDTOMapper(session.getCurrentTrack())
-                            );
-                        });
+        return service.getById(userDTO.getSessionId())
+            .switchIfEmpty(Mono.just(new Session()))
+            .flatMap(session -> {
+                if(session.getId() == null) {
+                    return Mono.just("Session closed");
                 }
-                // User already in a session
-                return Mono.just(user.getSessionId());
+                return userService.getById(userDTO.getId())
+                    .flatMap(user -> {
+                        if(user.getSessionId() == null) {
+                            user.setVotes(1);
+                            user.setSessionId(userDTO.getSessionId());
+                            return userService.save(user)
+                                .map(saved -> {
+                                    session.getMembers().add(saved);
+                                    service.save(session).subscribe();
+                                    return new JoinSessionDTO(
+                                        session.getId(),
+                                        session.getName(),
+                                        saved.getVotes(),
+                                        spotifyService.currentTrackDTOMapper(session.getCurrentTrack())
+                                    );
+                                });
+                        }
+                        // User already in a session
+                        return Mono.just(user.getSessionId());
+                    });
             }).map(response -> {
                 if(response instanceof JoinSessionDTO) {
                     return ResponseEntity.ok(response);
@@ -211,6 +235,22 @@ public class SessionController {
             });
     }
 
+    @PostMapping("/revokeTrack")
+    public void revokeTrack(@RequestBody VoteDTO voteDTO) {
+        userService.getById(voteDTO.getUserId())
+            .subscribe(user -> {
+                service.getById(user.getSessionId())
+                    .subscribe(session -> {
+                        service.returnVotesByTrack(session, voteDTO.getTrackId());
+                        session.getVotes().removeIf(vote -> vote.getTrackId().equals(voteDTO.getTrackId()));
+                        service.save(session).subscribe();
+                    });
+                user.setTrackId(null);
+                userService.save(user)
+                    .subscribe(saved -> service.sendTrackRemoveEvent(saved.getSessionId(), voteDTO.getTrackId()));
+            });
+    }
+
     @PostMapping("/vote")
     public Mono<ResponseEntity<?>> voteForTrack(@RequestBody VoteDTO voteDTO) {
         return userService.getById(voteDTO.getUserId())
@@ -224,18 +264,15 @@ public class SessionController {
                                 user.getId(),
                                 voteDTO.getTrackId()
                             ));
-                            service.save(session).subscribe(saved -> eventService
-                                .getPublishers()
-                                .get(saved.getId())
-                                .publishEvent(new SessionSSE(
-                                    EventType.VOTETRACK,
+                            service.save(session)
+                                .subscribe(saved -> service.sendVoteTrackEvent(
+                                    saved.getId(),
                                     service.sessionTrackDTOMapper(
                                         spotifyService.getTrackById(voteDTO.getTrackId()),
                                         saved.getVotes(),
                                         user.getId()
                                     )
-                                ))
-                            );
+                                ));
                         });
                     return userService.decVote(user);
                 }

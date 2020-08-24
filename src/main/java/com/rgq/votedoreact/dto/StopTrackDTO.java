@@ -8,6 +8,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 public class StopTrackDTO {
+    private String sessionName;
     private String ownerId;
     private String trackId;
     private Integer progressMs;

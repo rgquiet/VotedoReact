@@ -2,7 +2,6 @@ package com.rgq.votedoreact.service;
 
 import com.rgq.votedoreact.model.Session;
 import com.rgq.votedoreact.model.Track;
-import com.rgq.votedoreact.repo.SessionRepo;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -16,19 +15,18 @@ public class SchedulingService {
     private final SpotifyService spotifyService;
     private final HashMap<Session, String> monitoredSessions;
 
-    public SchedulingService(
-        SessionRepo repo,
-        SessionService service,
-        SpotifyService spotifyService
-    ) {
+    public SchedulingService(SessionService service, SpotifyService spotifyService) {
         this.service = service;
         this.spotifyService = spotifyService;
         this.monitoredSessions = new HashMap<>();
-        repo.findAll().subscribe(session -> monitoredSessions.put(session, null));
     }
 
     public HashMap<Session, String> getMonitoredSessions() {
         return monitoredSessions;
+    }
+
+    public void removeMonitoredSession(String id) {
+        monitoredSessions.entrySet().removeIf(sessionStringEntry -> sessionStringEntry.getKey().getId().equals(id));
     }
 
     @Scheduled(fixedRate = 5000)
@@ -39,15 +37,15 @@ public class SchedulingService {
             if(track != null) {
                 final String trackId = entry.getValue();
                 if(trackId != null) {
-                    //System.out.println(">>> Value: " + entry.getValue() + " <<<");
                     // Update session and alert all user about next track
-                    service.getById(entry.getKey().getId()).subscribe(update -> {
-                        service.removeTrackById(update, trackId);
-                        update.setVotes(service.cleanUpVotes(update.getVotes(), trackId));
-                        update.getPlayedTracks().add(update.getCurrentTrack());
-                        update.setCurrentTrack(track);
-                        service.save(update).subscribe();
-                    });
+                    service.getById(entry.getKey().getId())
+                        .subscribe(update -> {
+                            service.removeTrackById(update, trackId);
+                            update.getVotes().removeIf(vote -> vote.getTrackId().equals(trackId));
+                            update.getPlayedTracks().add(update.getCurrentTrack());
+                            update.setCurrentTrack(track);
+                            service.save(update).subscribe();
+                        });
                     service.sendTrackStartEvent(
                         entry.getKey().getId(),
                         spotifyService.currentTrackDTOMapper(track)
@@ -89,7 +87,8 @@ public class SchedulingService {
                 }
             } else {
                 // wip: Handle playback stopped, changed device, toke expired
-                service.sendSessionStopEvent(entry.getKey().getId(), "Received null");
+                service.closeSession(entry.getKey());
+                it.remove();
             }
         }
     }
