@@ -3,7 +3,7 @@ package com.rgq.votedoreact.controller;
 import com.rgq.votedoreact.dto.*;
 import com.rgq.votedoreact.service.SessionService;
 import com.rgq.votedoreact.sse.UserSSE;
-import com.rgq.votedoreact.model.User;
+import com.rgq.votedoreact.dao.UserDAO;
 import com.rgq.votedoreact.service.UserEventService;
 import com.rgq.votedoreact.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -48,7 +48,7 @@ public class UserController {
     @GetMapping("/friends/{id}")
     public Mono<ResponseEntity<List<FriendDTO>>> getFriendsById(@PathVariable String id) {
         return service.getById(id)
-            .map(User::getFriends)
+            .map(UserDAO::getFriends)
             .flatMapMany(Flux::fromIterable)
             .flatMap(service::getById)
             .map(friend -> new FriendDTO(friend.getId(), friend.getUsername(), friend.getImgUrl()))
@@ -59,7 +59,7 @@ public class UserController {
     @PostMapping("/friend")
     public Mono<ResponseEntity<String>> setFriend(@RequestBody CreateFriendDTO createFriendDTO) {
         return service.getById(createFriendDTO.getFriendId())
-            .switchIfEmpty(Mono.just(new User()))
+            .switchIfEmpty(Mono.just(new UserDAO()))
             .map(friend -> {
                 // Check if new friend is a user that exists
                 if(friend.getId() == null) {

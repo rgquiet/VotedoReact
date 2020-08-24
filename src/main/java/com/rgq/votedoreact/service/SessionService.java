@@ -1,13 +1,13 @@
 package com.rgq.votedoreact.service;
 
+import com.rgq.votedoreact.dao.SessionDAO;
+import com.rgq.votedoreact.dao.UserDAO;
 import com.rgq.votedoreact.dto.*;
-import com.rgq.votedoreact.model.Track;
-import com.rgq.votedoreact.model.User;
-import com.rgq.votedoreact.model.Vote;
+import com.rgq.votedoreact.dao.TrackDAO;
+import com.rgq.votedoreact.dao.VoteDAO;
 import com.rgq.votedoreact.sse.EventType;
 import com.rgq.votedoreact.sse.SessionSSE;
 import com.rgq.votedoreact.sse.UserSSE;
-import com.rgq.votedoreact.model.Session;
 import com.rgq.votedoreact.repo.SessionRepo;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -34,21 +34,21 @@ public class SessionService {
         this.eventService = eventService;
     }
 
-    public Mono<Session> save(Session session) {
+    public Mono<SessionDAO> save(SessionDAO session) {
         return repo.save(session);
     }
 
-    public Mono<Session> getById(String id) {
+    public Mono<SessionDAO> getById(String id) {
         return repo.findById(id);
     }
 
-    public Flux<Session> getOpenByNameLike(String name) {
+    public Flux<SessionDAO> getOpenByNameLike(String name) {
         // wip: https://stackoverflow.com/questions/9040161/mongo-order-by-length-of-array
         return repo.findAllByOpenAndNameLike(true, name).limitRequest(10);
     }
 
-    public void closeSession(Session session) {
-        User owner = session.getOwner();
+    public void closeSession(SessionDAO session) {
+        UserDAO owner = session.getOwner();
         owner.setSessionId(null);
         owner.setTrackId(null);
         owner.setVotes(0);
@@ -67,7 +67,7 @@ public class SessionService {
         repo.delete(session).subscribe();
     }
 
-    public void sendSessionStopEvent(Session session, Integer timeMs) {
+    public void sendSessionStopEvent(SessionDAO session, Integer timeMs) {
         eventService.getPublishers().get(session.getId())
             .publishEvent(new SessionSSE(
                 EventType.SESSIONSTOP,
@@ -106,7 +106,7 @@ public class SessionService {
             .publishEvent(new SessionSSE(EventType.TRACKSTART, dto));
     }
 
-    public void removeTrackById(Session session, String trackId) {
+    public void removeTrackById(SessionDAO session, String trackId) {
         boolean check = false;
         if(session.getOwner().getTrackId() != null) {
             if(session.getOwner().getTrackId().equals(trackId)) {
@@ -116,7 +116,7 @@ public class SessionService {
             }
         }
         if(!check) {
-            for(User user : session.getMembers()) {
+            for(UserDAO user : session.getMembers()) {
                 if(user.getTrackId() != null) {
                     if(user.getTrackId().equals(trackId)) {
                         user.setTrackId(null);
@@ -130,13 +130,13 @@ public class SessionService {
         if(check) { sendTrackRemoveEvent(session.getId(), trackId); }
     }
 
-    public Boolean trackAlreadyUsed(Session session, String trackId) {
+    public Boolean trackAlreadyUsed(SessionDAO session, String trackId) {
         if(session.getOwner().getTrackId() != null) {
             if(session.getOwner().getTrackId().equals(trackId)) {
                 return true;
             }
         }
-        for(User user : session.getMembers()) {
+        for(UserDAO user : session.getMembers()) {
             if(user.getTrackId() != null) {
                 if(user.getTrackId().equals(trackId)) {
                     return true;
@@ -148,7 +148,7 @@ public class SessionService {
                 return true;
             }
         }
-        for(Track track : session.getPlayedTracks()) {
+        for(TrackDAO track : session.getPlayedTracks()) {
             if(track.getTrackInfos().getId() != null) {
                 if(track.getTrackInfos().getId().equals(trackId)) {
                     return true;
@@ -158,7 +158,7 @@ public class SessionService {
         return false;
     }
 
-    public String evaluateNextTrack(Session session) {
+    public String evaluateNextTrack(SessionDAO session) {
         // Get trackId with the most votes
         HashMap<String, Integer> ranking = new HashMap<>();
         session.getVotes().forEach(vote -> ranking.merge(vote.getTrackId(), 1, Integer::sum));
@@ -169,7 +169,7 @@ public class SessionService {
         return winner.getKey();
     }
 
-    public String selectRandomTrack(Session session) {
+    public String selectRandomTrack(SessionDAO session) {
         if(session.getPlayedTracks().isEmpty()) {
             return session.getCurrentTrack().getTrackInfos().getId();
         }
@@ -187,12 +187,12 @@ public class SessionService {
             .publishEvent(new SessionSSE(EventType.VOTESTOP, null));
     }
 
-    public void distributeNewVotes(Session session) {
+    public void distributeNewVotes(SessionDAO session) {
         userService.incVote(session.getOwner());
         session.getMembers().forEach(userService::incVote);
     }
 
-    public void returnVotesByTrack(Session session, String trackId) {
+    public void returnVotesByTrack(SessionDAO session, String trackId) {
         HashMap<String, Integer> credit = new HashMap<>();
         session.getVotes().forEach(vote -> {
             if(vote.getTrackId().equals(trackId)) {
@@ -223,7 +223,7 @@ public class SessionService {
         );
     }
 
-    public SessionDTO sessionDTOMapper(Session session) {
+    public SessionDTO sessionDTOMapper(SessionDAO session) {
         return new SessionDTO(
             session.getId(),
             session.getName(),
@@ -234,10 +234,10 @@ public class SessionService {
         );
     }
 
-    public SessionTrackDTO sessionTrackDTOMapper(TrackDTO track, List<Vote> votes, String userId) {
+    public SessionTrackDTO sessionTrackDTOMapper(TrackDTO track, List<VoteDAO> votes, String userId) {
         Integer trackVote = 0;
         // Counts votes of the song in the session
-        for(Vote vote : votes) {
+        for(VoteDAO vote : votes) {
             if(vote.getTrackId().equals(track.getId())) {
                 trackVote++;
             }

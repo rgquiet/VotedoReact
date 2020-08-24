@@ -2,6 +2,8 @@ package com.rgq.votedoreact.service;
 
 import com.google.gson.JsonParser;
 import com.rgq.votedoreact.config.SpotifyAuthConfig;
+import com.rgq.votedoreact.dao.TrackDAO;
+import com.rgq.votedoreact.dao.UserDAO;
 import com.rgq.votedoreact.dto.AccessDTO;
 import com.rgq.votedoreact.dto.CurrentTrackDTO;
 import com.rgq.votedoreact.dto.DeviceDTO;
@@ -71,13 +73,13 @@ public class SpotifyService {
         return url;
     }
 
-    public com.rgq.votedoreact.model.User getSpotifyUser(AccessDTO dto) {
+    public UserDAO getSpotifyUser(AccessDTO dto) {
         SpotifyApi api = new SpotifyApi.Builder().setAccessToken(dto.getAccessToken()).build();
         GetCurrentUsersProfileRequest userRequest = api.getCurrentUsersProfile().build();
         try {
             final CompletableFuture<User> future = userRequest.executeAsync();
             return future.thenApply(userProfile -> {
-                com.rgq.votedoreact.model.User user = new com.rgq.votedoreact.model.User(
+                UserDAO user = new UserDAO(
                     userProfile.getId(),
                     userProfile.getProduct(),
                     null,
@@ -133,7 +135,7 @@ public class SpotifyService {
         return null;
     }
 
-    public com.rgq.votedoreact.model.Track getPlaybackStatus(String accessToken) {
+    public TrackDAO getPlaybackStatus(String accessToken) {
         SpotifyApi api = new SpotifyApi.Builder().setAccessToken(accessToken).build();
         GetInformationAboutUsersCurrentPlaybackRequest playbackRequest =
         api.getInformationAboutUsersCurrentPlayback().build();
@@ -142,7 +144,7 @@ public class SpotifyService {
             return future.thenApply(playback -> {
                 if(playback.getItem() instanceof Track) {
                     Track spotifyTrack = (Track)playback.getItem();
-                    return new com.rgq.votedoreact.model.Track(
+                    return new TrackDAO(
                         trackDTOMapper(spotifyTrack),
                         playback.getProgress_ms(),
                         new Date().getTime()
@@ -254,7 +256,7 @@ public class SpotifyService {
         );
     }
 
-    public CurrentTrackDTO currentTrackDTOMapper(com.rgq.votedoreact.model.Track track) {
+    public CurrentTrackDTO currentTrackDTOMapper(TrackDAO track) {
         return new CurrentTrackDTO(
             track.getTrackInfos().getId(),
             track.getTrackInfos().getName(),

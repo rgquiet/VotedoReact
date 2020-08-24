@@ -1,8 +1,8 @@
 package com.rgq.votedoreact.controller;
 
+import com.rgq.votedoreact.dao.UserDAO;
 import com.rgq.votedoreact.dto.AccessDTO;
 import com.rgq.votedoreact.dto.TrackDTO;
-import com.rgq.votedoreact.model.User;
 import com.rgq.votedoreact.service.SpotifyService;
 import com.rgq.votedoreact.service.UserEventService;
 import com.rgq.votedoreact.service.UserService;
@@ -37,7 +37,7 @@ public class SpotifyController {
 
     @PostMapping("/token")
     public Mono<ResponseEntity<?>> setToken(@RequestBody AccessDTO accessDTO) {
-        User user = service.getSpotifyUser(accessDTO);
+        UserDAO user = service.getSpotifyUser(accessDTO);
         if(user == null) {
             return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid token"));
         }

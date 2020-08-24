@@ -1,4 +1,4 @@
-package com.rgq.votedoreact.model;
+package com.rgq.votedoreact.dao;
 
 import lombok.*;
 import org.springframework.data.annotation.Id;
@@ -12,17 +12,17 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "sessions")
-public class Session {
+public class SessionDAO {
     @Id
     private String id;
     private String deviceId;
     private String name;
     private Boolean open;
     @DBRef
-    private User owner;
+    private UserDAO owner;
     @DBRef
-    private List<User> members;
-    private Track currentTrack;
-    private List<Track> playedTracks;
-    private List<Vote> votes;
+    private List<UserDAO> members;
+    private TrackDAO currentTrack;
+    private List<TrackDAO> playedTracks;
+    private List<VoteDAO> votes;
 }

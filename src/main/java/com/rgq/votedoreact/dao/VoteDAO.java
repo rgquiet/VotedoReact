@@ -1,4 +1,4 @@
-package com.rgq.votedoreact.model;
+package com.rgq.votedoreact.dao;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,7 +11,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Vote {
+public class VoteDAO {
     private UUID id;
     private String userId;
     private String trackId;

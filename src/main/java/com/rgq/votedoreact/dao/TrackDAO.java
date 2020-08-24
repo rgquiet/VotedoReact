@@ -1,4 +1,4 @@
-package com.rgq.votedoreact.model;
+package com.rgq.votedoreact.dao;
 
 import com.rgq.votedoreact.dto.TrackDTO;
 import lombok.AllArgsConstructor;
@@ -10,7 +10,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Track {
+public class TrackDAO {
     private TrackDTO trackInfos;
     private Integer progressMs;
     private Long timestamp;

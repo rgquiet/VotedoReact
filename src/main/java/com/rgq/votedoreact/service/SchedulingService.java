@@ -1,7 +1,7 @@
 package com.rgq.votedoreact.service;
 
-import com.rgq.votedoreact.model.Session;
-import com.rgq.votedoreact.model.Track;
+import com.rgq.votedoreact.dao.SessionDAO;
+import com.rgq.votedoreact.dao.TrackDAO;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +13,7 @@ import java.util.Map;
 public class SchedulingService {
     private final SessionService service;
     private final SpotifyService spotifyService;
-    private final HashMap<Session, String> monitoredSessions;
+    private final HashMap<SessionDAO, String> monitoredSessions;
 
     public SchedulingService(SessionService service, SpotifyService spotifyService) {
         this.service = service;
@@ -21,7 +21,7 @@ public class SchedulingService {
         this.monitoredSessions = new HashMap<>();
     }
 
-    public HashMap<Session, String> getMonitoredSessions() {
+    public HashMap<SessionDAO, String> getMonitoredSessions() {
         return monitoredSessions;
     }
 
@@ -31,9 +31,9 @@ public class SchedulingService {
 
     @Scheduled(fixedRate = 5000)
     private void checkPlaybackStatus() {
-        for(Iterator<Map.Entry<Session, String>> it = monitoredSessions.entrySet().iterator(); it.hasNext();) {
-            final Map.Entry<Session, String> entry = it.next();
-            final Track track = spotifyService.getPlaybackStatus(entry.getKey().getOwner().getAccessToken());
+        for(Iterator<Map.Entry<SessionDAO, String>> it = monitoredSessions.entrySet().iterator(); it.hasNext();) {
+            final Map.Entry<SessionDAO, String> entry = it.next();
+            final TrackDAO track = spotifyService.getPlaybackStatus(entry.getKey().getOwner().getAccessToken());
             if(track != null) {
                 final String trackId = entry.getValue();
                 if(trackId != null) {

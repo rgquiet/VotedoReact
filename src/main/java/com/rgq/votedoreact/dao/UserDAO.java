@@ -1,4 +1,4 @@
-package com.rgq.votedoreact.model;
+package com.rgq.votedoreact.dao;
 
 import com.wrapper.spotify.enums.ProductType;
 import lombok.*;
@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "users")
-public class User {
+public class UserDAO {
     @Id
     private String id;
     private ProductType product;

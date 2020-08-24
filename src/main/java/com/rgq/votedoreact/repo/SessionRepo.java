@@ -1,10 +1,10 @@
 package com.rgq.votedoreact.repo;
 
-import com.rgq.votedoreact.model.Session;
+import com.rgq.votedoreact.dao.SessionDAO;
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 import reactor.core.publisher.Flux;
 
-public interface SessionRepo extends ReactiveMongoRepository<Session, String> {
+public interface SessionRepo extends ReactiveMongoRepository<SessionDAO, String> {
 
-    Flux<Session> findAllByOpenAndNameLike(Boolean open, String name);
+    Flux<SessionDAO> findAllByOpenAndNameLike(Boolean open, String name);
 }

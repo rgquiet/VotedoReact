@@ -1,10 +1,10 @@
 package com.rgq.votedoreact.controller;
 
 import com.rgq.votedoreact.config.SessionEventPublisher;
+import com.rgq.votedoreact.dao.SessionDAO;
 import com.rgq.votedoreact.dto.*;
-import com.rgq.votedoreact.model.Session;
-import com.rgq.votedoreact.model.Track;
-import com.rgq.votedoreact.model.Vote;
+import com.rgq.votedoreact.dao.TrackDAO;
+import com.rgq.votedoreact.dao.VoteDAO;
 import com.rgq.votedoreact.service.*;
 import com.wrapper.spotify.enums.ProductType;
 import org.springframework.http.HttpStatus;
@@ -106,7 +106,7 @@ public class SessionController {
                         stopTrackDTO.getTrackId(),
                         stopTrackDTO.getProgressMs()
                     );
-                    final Track track = spotifyService.getPlaybackStatus(owner.getAccessToken());
+                    final TrackDAO track = spotifyService.getPlaybackStatus(owner.getAccessToken());
                     track.setTimestamp(track.getTimestamp() - stopTrackDTO.getProgressMs());
                     service.sendTrackStartEvent(session.getId(), spotifyService.currentTrackDTOMapper(track));
                     session.setCurrentTrack(track);
@@ -120,7 +120,7 @@ public class SessionController {
     @PostMapping("/join")
     public Mono<ResponseEntity<?>> joinSession(@RequestBody UserDTO userDTO) {
         return service.getById(userDTO.getSessionId())
-            .switchIfEmpty(Mono.just(new Session()))
+            .switchIfEmpty(Mono.just(new SessionDAO()))
             .flatMap(session -> {
                 if(session.getId() == null) {
                     return Mono.just("Session closed");
@@ -160,9 +160,9 @@ public class SessionController {
                 if(user.getSessionId() == null) {
                     if(user.getProduct() == ProductType.PREMIUM) {
                         spotifyService.startPlaybackOnDevice(user.getAccessToken(), createSessionDTO.getDeviceId());
-                        final Track track = spotifyService.getPlaybackStatus(user.getAccessToken());
+                        final TrackDAO track = spotifyService.getPlaybackStatus(user.getAccessToken());
                         final Boolean open = (createSessionDTO.getInvitations() == null);
-                        return service.save(new Session(
+                        return service.save(new SessionDAO(
                             null,
                             createSessionDTO.getDeviceId(),
                             createSessionDTO.getName(),
@@ -259,7 +259,7 @@ public class SessionController {
                 && !Objects.equals(user.getTrackId(), voteDTO.getTrackId())) {
                     service.getById(user.getSessionId())
                         .subscribe(session -> {
-                            session.getVotes().add(new Vote(
+                            session.getVotes().add(new VoteDAO(
                                 UUID.randomUUID(),
                                 user.getId(),
                                 voteDTO.getTrackId()
