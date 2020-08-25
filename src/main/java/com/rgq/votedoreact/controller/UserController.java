@@ -56,33 +56,48 @@ public class UserController {
             .map(ResponseEntity::ok);
     }
 
-    @PostMapping("/friend")
-    public Mono<ResponseEntity<String>> setFriend(@RequestBody CreateFriendDTO createFriendDTO) {
-        return service.getById(createFriendDTO.getFriendId())
+    @PostMapping("/addFriend")
+    public Mono<ResponseEntity<String>> addFriend(@RequestBody EditFriendDTO friendDTO) {
+        return service.getById(friendDTO.getFriendId())
             .switchIfEmpty(Mono.just(new UserDAO()))
             .map(friend -> {
                 // Check if new friend is a user that exists
                 if(friend.getId() == null) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No user with this id");
-                } else {
-                    // Get user to save new friend
-                    service.getById(createFriendDTO.getId())
-                        .subscribe(user -> {
-                            // Check if user already saved this friend
-                            ExistDTO existDTO = new ExistDTO(false);
-                            user.getFriends().forEach(id -> {
-                                if(id.equals(createFriendDTO.getFriendId())) {
-                                    existDTO.setExist(true);
-                                }
-                            });
-                            if(!existDTO.getExist()) {
-                                // Set new friend and save affected user
-                                user.getFriends().add(createFriendDTO.getFriendId());
-                                service.save(user).subscribe();
+                }
+                // Get user to save new friend
+                service.getById(friendDTO.getId())
+                    .subscribe(user -> {
+                        // Check if user already saved this friend
+                        ExistDTO existDTO = new ExistDTO(false);
+                        user.getFriends().forEach(id -> {
+                            if(id.equals(friendDTO.getFriendId())) {
+                                existDTO.setExist(true);
                             }
                         });
-                    return ResponseEntity.ok(createFriendDTO.getFriendId() + " saved");
+                        if(!existDTO.getExist()) {
+                            // Set new friend and save affected user
+                            user.getFriends().add(friendDTO.getFriendId());
+                            service.save(user).subscribe();
+                        }
+                    });
+                return ResponseEntity.ok(friendDTO.getFriendId() + " saved");
+            });
+    }
+
+    @PostMapping("/removeFriend")
+    public Mono<ResponseEntity<String>> removeFriend(@RequestBody EditFriendDTO friendDTO) {
+        return service.getById(friendDTO.getId())
+            .flatMap(user -> {
+                if(user.getFriends().removeIf(friend -> friend.equals(friendDTO.getFriendId()))) {
+                    return service.save(user).map(saved -> friendDTO.getId() + " removed");
                 }
+                return Mono.just("No user with this id");
+            }).map(response -> {
+                if(response.equals("No user with this id")) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+                }
+                return ResponseEntity.ok(response);
             });
     }
 

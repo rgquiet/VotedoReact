@@ -194,7 +194,6 @@ public class SessionController {
                                 session.getId(),
                                 session.getName(),
                                 user.getVotes(),
-                                // wip: NullPointer if device is a mobile
                                 spotifyService.currentTrackDTOMapper(session.getCurrentTrack())
                             );
                         });

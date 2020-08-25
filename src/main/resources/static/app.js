@@ -6,8 +6,8 @@ let rate = 0;
 let interval = null;
 let userSse = null;
 let sessionSse = null;
-let currentModal = null;
 let currentAlert = null;
+let currentModal = null;
 
 $(window).on('beforeunload', function() {
     if(userSse) {
@@ -37,8 +37,7 @@ function checkAccessToken() {
                 timestamp: new Date().getTime() + Number(params.get('expires_in')) * 1000
             }),
             statusCode: {
-                403: function(xhr) {
-                    console.log(xhr['responseText']);
+                403: function() {
                     window.location.replace(home);
                 }
             },
@@ -171,12 +170,12 @@ async function showAlert(header, message, buttons) {
         buttons: buttons
     });
     await alert.present();
-    currentAlert = alert;
 }
 
 function dismissAlert() {
     if(currentAlert) {
-        currentAlert.dismiss().then(() => { currentAlert = null; });
+        currentAlert.dismiss();
+        currentAlert = null;
     }
 }
 
@@ -226,7 +225,6 @@ function onJoinSession(sessionId) {
             }),
             statusCode: {
                 403: function(xhr) {
-                    console.log(xhr['responseText']);
                     if(xhr['responseText'] === 'Session closed') {
                         onPublicSession('');
                         showAlert('Attention', 'This session has already been closed', ['OK']);
@@ -329,9 +327,9 @@ function onAudioDevice() {
         url: api + 'spotify/devices/' + sessionStorage.getItem('userId'),
         contentType: 'application/json; charset=utf-8',
         statusCode: {
-            403: function(xhr) {
-                console.log(xhr['responseText']);
-                // wip: Alert that no device is available
+            403: function() {
+                $('ion-alert')[0].dismiss();
+                showAlert('Attention', 'Please start spotify on any device', ['OK']);
             }
         },
         success: function(response) {
@@ -485,7 +483,7 @@ function onMyFriends() {
 function onInviteFriend(friend) {
     $.ajax({
         type: 'POST',
-        url: api + 'user/friend',
+        url: api + 'user/addFriend',
         dataType: 'text',
         contentType: 'application/json; charset=utf-8',
         data: JSON.stringify({
@@ -504,8 +502,24 @@ function onInviteFriend(friend) {
 }
 
 function onFriendRemove(tag) {
-    // wip...
-    console.log(tag);
+    $.ajax({
+        type: 'POST',
+        url: api + 'user/removeFriend',
+        dataType: 'text',
+        contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify({
+            id: sessionStorage.getItem('userId'),
+            friendId: tag.parent().attr('id')
+        }),
+        statusCode: {
+            403: function(xhr) {
+                console.log(xhr['responseText']);
+            }
+        },
+        success: function() {
+            onMyFriends();
+        }
+    });
 }
 
 /* Page: 'session' */
@@ -914,6 +928,7 @@ function onSessionStop(stop) {
                 handler: () => { onFlameHost(); }
             }
         ]);
+        currentAlert = $('ion-alert')[0];
     }
     if(interval !== null) {
         clearInterval(interval);

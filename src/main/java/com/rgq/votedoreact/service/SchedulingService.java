@@ -86,7 +86,7 @@ public class SchedulingService {
                     }
                 }
             } else {
-                // wip: Handle playback stopped, changed device, toke expired
+                // wip: Handle playback stopped, changed device, token expired
                 service.closeSession(entry.getKey());
                 it.remove();
             }

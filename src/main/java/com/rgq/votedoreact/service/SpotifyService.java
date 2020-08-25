@@ -150,7 +150,8 @@ public class SpotifyService {
                         new Date().getTime()
                     );
                 }
-                return null;
+                // wip: Endless if always null
+                return getPlaybackStatus(accessToken);
             }).get();
         } catch(InterruptedException | ExecutionException | CompletionException e) {
             logger.error("Error occurred: ", e);

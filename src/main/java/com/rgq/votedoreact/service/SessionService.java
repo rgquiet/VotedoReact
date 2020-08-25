@@ -43,7 +43,6 @@ public class SessionService {
     }
 
     public Flux<SessionDAO> getOpenByNameLike(String name) {
-        // wip: https://stackoverflow.com/questions/9040161/mongo-order-by-length-of-array
         return repo.findAllByOpenAndNameLike(true, name).limitRequest(10);
     }
 

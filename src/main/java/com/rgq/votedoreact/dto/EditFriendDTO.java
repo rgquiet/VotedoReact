@@ -7,7 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class CreateFriendDTO {
+public class EditFriendDTO {
     private String id;
     private String friendId;
 }
